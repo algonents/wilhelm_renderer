@@ -1,6 +1,8 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 extern "C"
 {
@@ -54,8 +56,11 @@ extern "C"
     GLint _glGenTexture();
     void _glBindTexture(GLenum target, GLuint texture);
     void _glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *data);
+    void _glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data);
     void _glTexParameteri(GLenum target, GLenum pname, GLint param);
     void _glGenerateMipmap(GLenum target);
+    void _glPixelStorei(GLenum pname, GLint param);
+    void _glDeleteTexture(GLuint texture);
 
     GLuint _glGenVertexArray();
     void _glDeleteVertexArray(GLuint vao);
@@ -77,4 +82,26 @@ extern "C"
     void _glPointSize(GLfloat size);
     void _glEnable(GLenum cap);
     void _glBlendFunc(GLenum sfactor, GLenum dfactor);
+
+    // FreeType
+    int _ft_init_freetype(FT_Library *library);
+    void _ft_done_freetype(FT_Library library);
+
+    int _ft_new_face(FT_Library library, const char *filepath, long face_index, FT_Face *face);
+    void _ft_done_face(FT_Face face);
+    int _ft_set_pixel_sizes(FT_Face face, unsigned int width, unsigned int height);
+    int _ft_load_char(FT_Face face, unsigned long char_code, int load_flags);
+
+    // Glyph access - returns pointers to data inside FT_Face->glyph
+    struct FT_GlyphMetrics {
+        int width;          // Glyph width in pixels
+        int height;         // Glyph height in pixels (rows)
+        int bearing_x;      // Horizontal bearing (left)
+        int bearing_y;      // Vertical bearing (top)
+        long advance;       // Horizontal advance (in 1/64th pixels)
+    };
+
+    void _ft_get_glyph_metrics(FT_Face face, FT_GlyphMetrics *metrics);
+    unsigned char *_ft_get_glyph_bitmap(FT_Face face);
+    int _ft_get_glyph_bitmap_pitch(FT_Face face);
 };

@@ -18,6 +18,8 @@ fn main() {
 
     let cmake_build_output = dst.join("build");
 
+    let profile = env::var("PROFILE").unwrap();
+
     // handle platform-specific configuration
     if target.contains("linux") {
         println!(
@@ -26,6 +28,12 @@ fn main() {
         );
         println!("cargo:rustc-link-lib=static=glrenderer");
         println!("cargo:rustc-link-lib=static=glfw3");
+        // FreeType uses 'd' suffix for debug builds
+        if profile == "debug" {
+            println!("cargo:rustc-link-lib=static=freetyped");
+        } else {
+            println!("cargo:rustc-link-lib=static=freetype");
+        }
 
         println!("cargo:rustc-link-lib=dylib=GL");
         println!("cargo:rustc-link-lib=dylib=stdc++");
@@ -36,8 +44,13 @@ fn main() {
         );
         println!("cargo:rustc-link-lib=static=glrenderer");
         println!("cargo:rustc-link-lib=static=glfw3");
+        // FreeType uses 'd' suffix for debug builds
+        if profile == "debug" {
+            println!("cargo:rustc-link-lib=static=freetyped");
+        } else {
+            println!("cargo:rustc-link-lib=static=freetype");
+        }
 
-        // Add these:
         println!("cargo:rustc-link-lib=framework=CoreFoundation");
         println!("cargo:rustc-link-lib=framework=IOKit");
         println!("cargo:rustc-link-lib=framework=Cocoa");
@@ -45,7 +58,6 @@ fn main() {
 
         println!("cargo:rustc-link-lib=dylib=c++");
     } else if target.contains("windows") {
-        let profile = std::env::var("PROFILE").unwrap();
         let build_dir = if profile == "debug" {
             cmake_build_output.join("Debug")
         } else {
@@ -54,7 +66,13 @@ fn main() {
 
         println!("cargo:rustc-link-search=native={}", build_dir.display());
         println!("cargo:rustc-link-lib=static=glrenderer");
-        println!("cargo:rustc-link-lib=static=glfw3"); // ← link statically, not glfw3dll
+        println!("cargo:rustc-link-lib=static=glfw3");
+        // FreeType uses 'd' suffix for debug builds
+        if profile == "debug" {
+            println!("cargo:rustc-link-lib=static=freetyped");
+        } else {
+            println!("cargo:rustc-link-lib=static=freetype");
+        }
 
         // Link Windows system libraries
         println!("cargo:rustc-link-lib=dylib=opengl32");

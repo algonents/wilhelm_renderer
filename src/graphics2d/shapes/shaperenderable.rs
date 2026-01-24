@@ -2,12 +2,12 @@ use crate::core::engine::opengl::{
     GL_POINTS, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLES, GLfloat, Vec2,
 };
 use crate::core::{
-    Attribute, Color, Geometry, Mesh, Renderable, Renderer, Shader, generate_texture_from_image,
-    load_image,
+    Attribute, Color, FontAtlas, Geometry, Mesh, Renderable, Renderer, Shader,
+    generate_texture_from_image, load_image,
 };
 use crate::graphics2d::shapes::{
     Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Polygon, Polyline, Rectangle,
-    RoundedRectangle, ShapeKind, Triangle,
+    RoundedRectangle, ShapeKind, Text, Triangle,
 };
 use crate::graphics2d::svg::ToSvg;
 use glam::{Mat4, Vec3};
@@ -80,6 +80,22 @@ fn image_shader() -> Rc<Shader> {
             let frag_src = include_str!("../shaders/image.frag");
             Rc::new(
                 Shader::compile(vert_src, frag_src, None).expect("Failed to compile image shader"),
+            )
+        })
+        .clone()
+    })
+}
+
+thread_local! {
+    static TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
+}
+fn text_shader() -> Rc<Shader> {
+    TEXT_SHADER.with(|cell| {
+        cell.get_or_init(|| {
+            let vert_src = include_str!("../shaders/text.vert");
+            let frag_src = include_str!("../shaders/text.frag");
+            Rc::new(
+                Shader::compile(vert_src, frag_src, None).expect("Failed to compile text shader"),
             )
         })
         .clone()
@@ -187,6 +203,9 @@ impl ShapeRenderable {
             ),
             ShapeKind::Image(_) => {
                 unimplemented!("ShapeRenderable::from_shape cannot create Image without path")
+            }
+            ShapeKind::Text(text) => {
+                ShapeRenderable::text(x, y, text, style.fill.unwrap_or(Color::white()))
             }
         }
     }
@@ -361,6 +380,27 @@ impl ShapeRenderable {
         let geometry = ShapeRenderable::ellipse_geometry(ellipse.radius_x, ellipse.radius_y, 64);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
         ShapeRenderable::new(x, y, mesh, ShapeKind::Ellipse(ellipse))
+    }
+
+    fn text(x: f32, y: f32, text: Text, color: Color) -> Self {
+        // Create font atlas for this text
+        let mut font_atlas = FontAtlas::new(&text.font_path, text.font_size, 512)
+            .expect("Failed to create font atlas");
+
+        // Generate geometry for all characters
+        let geometry = ShapeRenderable::text_geometry(&text.content, &mut font_atlas);
+
+        // Create mesh with text shader and font atlas texture
+        let shader = text_shader();
+        let mut mesh = Mesh::with_texture(shader, geometry, Some(font_atlas.texture_id()));
+        mesh.color = Some(color);
+
+        // Store the font atlas in the mesh (we need to keep it alive)
+        // For now, we'll leak the atlas to keep the texture valid
+        // TODO: Add proper font atlas caching/management
+        std::mem::forget(font_atlas);
+
+        ShapeRenderable::new(x, y, mesh, ShapeKind::Text(text))
     }
 
     pub fn image_with_size(x: f32, y: f32, path: &str, width: f32, height: f32) -> ShapeRenderable {
@@ -783,6 +823,73 @@ impl ShapeRenderable {
         geometry
     }
 
+    /// Generate geometry for text rendering
+    /// Creates textured quads for each character using glyph info from the font atlas
+    fn text_geometry(text: &str, font_atlas: &mut FontAtlas) -> Geometry {
+        let mut vertices: Vec<f32> = Vec::new();
+        let mut cursor_x: f32 = 0.0;
+        let baseline_y: f32 = font_atlas.font_size() as f32; // Start from baseline
+
+        for ch in text.chars() {
+            if let Some(glyph) = font_atlas.get_glyph(ch) {
+                // Skip rendering for whitespace but advance cursor
+                if glyph.width == 0 || glyph.height == 0 {
+                    cursor_x += glyph.advance;
+                    continue;
+                }
+
+                // Calculate quad position
+                let x0 = cursor_x + glyph.bearing_x as f32;
+                let y0 = baseline_y - glyph.bearing_y as f32; // Y increases downward in screen coords
+                let x1 = x0 + glyph.width as f32;
+                let y1 = y0 + glyph.height as f32;
+
+                // UV coordinates from font atlas
+                let u0 = glyph.uv_x;
+                let v0 = glyph.uv_y;
+                let u1 = glyph.uv_x + glyph.uv_width;
+                let v1 = glyph.uv_y + glyph.uv_height;
+
+                // Two triangles per character quad
+                // Triangle 1: bottom-left, bottom-right, top-right
+                vertices.extend_from_slice(&[
+                    x0, y1, u0, v1, // bottom-left
+                    x1, y1, u1, v1, // bottom-right
+                    x1, y0, u1, v0, // top-right
+                ]);
+                // Triangle 2: bottom-left, top-right, top-left
+                vertices.extend_from_slice(&[
+                    x0, y1, u0, v1, // bottom-left
+                    x1, y0, u1, v0, // top-right
+                    x0, y0, u0, v0, // top-left
+                ]);
+
+                cursor_x += glyph.advance;
+            }
+        }
+
+        let values_per_vertex = 4; // x, y, u, v
+
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, values_per_vertex);
+
+        geometry.add_vertex_attribute(Attribute::new(
+            0, // location 0: position
+            2, // x, y
+            values_per_vertex as usize,
+            0,
+        ));
+
+        geometry.add_vertex_attribute(Attribute::new(
+            1, // location 1: texcoord
+            2, // u, v
+            values_per_vertex as usize,
+            2, // offset by 2 floats
+        ));
+
+        geometry
+    }
+
     fn svg_color(&self) -> String {
         self.mesh
             .color
@@ -909,6 +1016,17 @@ impl ToSvg for ShapeRenderable {
             }
             ShapeKind::Arc(_) => {
                 unimplemented!("Arc SVG export is not yet implemented")
+            }
+            ShapeKind::Text(text) => {
+                // SVG text element - simplified, doesn't use font atlas
+                format!(
+                    r#"<text x="{x}" y="{y}" fill="{color}" font-size="{size}">{content}</text>"#,
+                    x = self.x,
+                    y = self.y,
+                    color = self.svg_color(),
+                    size = text.font_size,
+                    content = text.content,
+                )
             }
         }
     }

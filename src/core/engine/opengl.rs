@@ -68,6 +68,7 @@ pub const GL_TEXTURE0: u32 = 0x84C0;
 pub const GL_TEXTURE_WRAP_S: u32 = 0x2802;
 pub const GL_TEXTURE_WRAP_T: u32 = 0x2803;
 pub const GL_REPEAT: GLint = 0x2901;
+pub const GL_CLAMP_TO_EDGE: GLint = 0x812F;
 pub const GL_TEXTURE_MAG_FILTER: u32 = 0x2800;
 pub const GL_TEXTURE_MIN_FILTER: u32 = 0x2801;
 pub const GL_LINEAR: GLint = 0x2601;
@@ -76,6 +77,7 @@ pub const GL_RGB: GLint = 0x1907;
 pub const GL_RGBA: GLint = 0x1908;
 pub const GL_MULTISAMPLE: GLuint = 0x809D;
 pub const GL_SAMPLES: GLuint = 0x80A9;
+pub const GL_UNPACK_ALIGNMENT: GLenum = 0x0CF5;
 
 unsafe extern "C" {
     fn _glClearColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
@@ -124,6 +126,19 @@ unsafe extern "C" {
         dataType: GLenum,
         data: *const GLvoid,
     );
+    fn _glTexSubImage2D(
+        target: GLenum,
+        level: GLint,
+        xoffset: GLint,
+        yoffset: GLint,
+        width: GLsizei,
+        height: GLsizei,
+        format: GLenum,
+        dataType: GLenum,
+        data: *const GLvoid,
+    );
+    fn _glPixelStorei(pname: GLenum, param: GLint);
+    fn _glDeleteTexture(texture: GLuint);
     fn _glEnableVertexAttribArray(index: GLuint);
     fn _glDrawArrays(mode: GLenum, first: GLint, count: GLsizei);
     fn _glDrawArraysInstanced(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei);
@@ -461,5 +476,43 @@ pub fn gl_tex_image_2d(
             data_type,
             data,
         );
+    }
+}
+
+pub fn gl_tex_sub_image_2d(
+    target: GLenum,
+    level: GLint,
+    xoffset: GLint,
+    yoffset: GLint,
+    width: GLsizei,
+    height: GLsizei,
+    format: GLenum,
+    data_type: GLenum,
+    data: *const GLvoid,
+) {
+    unsafe {
+        _glTexSubImage2D(
+            target,
+            level,
+            xoffset,
+            yoffset,
+            width,
+            height,
+            format,
+            data_type,
+            data,
+        );
+    }
+}
+
+pub fn gl_pixel_storei(pname: GLenum, param: GLint) {
+    unsafe {
+        _glPixelStorei(pname, param);
+    }
+}
+
+pub fn gl_delete_texture(texture: GLuint) {
+    unsafe {
+        _glDeleteTexture(texture);
     }
 }
