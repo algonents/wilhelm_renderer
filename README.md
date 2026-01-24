@@ -1,6 +1,6 @@
-# sky_renderer
+# wilhelm_renderer
 
-sky_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
+wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
 Its goal is to provide a robust foundation for rendering 2D shapes and visualizing 2-dimensional 
 data in real time.
 
@@ -34,17 +34,17 @@ Other features:
 
 ### 📦 Examples code
 
-You can find usage examples in the [examples directory](https://github.com/algonents/sky-renderer/tree/master/examples) 
-of the **sky_renderer** repository. These will be updated as new futures are introduced.
+You can find usage examples in the [examples directory](https://github.com/algonents/wilhelm-renderer/tree/master/examples) 
+of the **wilhelm_renderer** repository. These will be updated as new futures are introduced.
 
 Basic API usage is illustrated below:
 
 ```rust
-extern crate sky_renderer;
+extern crate wilhelm_renderer;
 
-use sky_renderer::core::{App, Color, Renderable, Renderer, Window};
-use sky_renderer::graphics2d::shapes::Rectangle;
-use sky_renderer::graphics2d::shapes::ShapeRenderable;
+use wilhelm_renderer::core::{App, Color, Renderable, Renderer, Window};
+use wilhelm_renderer::graphics2d::shapes::Rectangle;
+use wilhelm_renderer::graphics2d::shapes::ShapeRenderable;
 
 fn main() {
     let window = Window::new("Shapes", 800, 800);
@@ -83,7 +83,7 @@ fn main() {
 }
 ```
 For a full example, see: 
-- [shapes.rs](https://github.com/algonents/sky-renderer/tree/master/examples/shapes.rs)
+- [shapes.rs](https://github.com/algonents/wilhelm-renderer/tree/master/examples/shapes.rs)
 
 ![Shapes](images/shapes.png)
 
@@ -96,13 +96,13 @@ Additional examples:
 tbd.
 ### Wiki
 
-Refer to the **sky_renderer** GitHub [wiki](https://github.com/algonents/sky-renderer/wiki), which will be updated soon.
+Refer to the **wilhelm_renderer** GitHub [wiki](https://github.com/algonents/wilhelm-renderer/wiki), which will be updated soon.
 
 
 
 ## 🐞 Issues
 
-You can raise issues directly on [Github](https://github.com/algonents/sky-renderer/issues).
+You can raise issues directly on [Github](https://github.com/algonents/wilhelm-renderer/issues).
 
 ## 🔧 Installation
 
@@ -117,12 +117,12 @@ sudo apt install mesa-utils
 # sudo apt install libglfw3-dev
 sudo apt install libwayland-dev libxkbcommon-dev xorg-dev
 ```
-You can add sky_renderer as a dependency in your project. During the build process, 
+You can add wilhelm_renderer as a dependency in your project. During the build process, 
 Cargo will invoke CMake (using your system’s C/C++ compiler) to compile a static library 
-containing the sky_renderer FFI bindings to OpenGL
+containing the wilhelm_renderer FFI bindings to OpenGL
 
 The FFI bindings are available in the 
-project's [cpp/ directory](https://github.com/algonents/sky-renderer/tree/master/cpp)
+project's [cpp/ directory](https://github.com/algonents/wilhelm-renderer/tree/master/cpp)
 
 
 ### Windows
@@ -131,7 +131,7 @@ Ensure you have Visual C++ Build Tools and CMake installed.
 
 **For v0.4.0 and later**
 
-No external GLFW installation is required — GLFW 3.4 is bundled and statically compiled with sky_renderer. 
+No external GLFW installation is required — GLFW 3.4 is bundled and statically compiled with wilhelm_renderer. 
 You only need a C/C++ compiler and CMake available in your environment.
 
 **For versions prior to 0.4.0**
@@ -155,7 +155,7 @@ your system PATH.
 You need a C/C++ compiler and CMake available in your environment.
 
 **For v0.4.0 and later**
-No external GLFW installation is required — GLFW 3.4 is bundled and statically compiled with *sky_renderer*.
+No external GLFW installation is required — GLFW 3.4 is bundled and statically compiled with *wilhelm_renderer*.
 
 **For versions prior to 0.4.0**
 

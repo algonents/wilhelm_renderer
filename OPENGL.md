@@ -44,7 +44,7 @@
 - GPU-driven particle systems
 - Compute shaders for physics/simulation
 
-## Next Steps for sky-renderer
+## Next Steps for wilhelm-renderer
 1. Batching renderer - group similar shapes, one draw call
 2. Text rendering - SDF fonts
 3. Framebuffers - enables post-processing & layers

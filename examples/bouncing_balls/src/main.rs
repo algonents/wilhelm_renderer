@@ -1,7 +1,7 @@
-extern crate sky_renderer;
+extern crate wilhelm_renderer;
 
-use sky_renderer::core::{App, Color, Renderable, Renderer, Window};
-use sky_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
+use wilhelm_renderer::core::{App, Color, Renderable, Renderer, Window};
+use wilhelm_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
 
 use rand::{rngs::ThreadRng, Rng};
 use rand::distr::Uniform;

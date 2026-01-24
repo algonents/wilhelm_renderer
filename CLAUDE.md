@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-sky-renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. It provides rendering of 2D shapes and visualization of 2-dimensional data in real time. The project uses OpenGL 3.3 Core Profile with GLFW 3.4 (bundled) for window management.
+wilhelm-renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. It provides rendering of 2D shapes and visualization of 2-dimensional data in real time. The project uses OpenGL 3.3 Core Profile with GLFW 3.4 (bundled) for window management.
 
 ## Build Commands
 

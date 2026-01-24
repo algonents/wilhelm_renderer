@@ -477,7 +477,7 @@ impl ShapeRenderable {
     /// Source: https://git.sr.ht/~jvernay/JV/tree/main/item/src/jv_polyline/jv_polyline.c
     ///
     /// This implementation is based on the original algorithm,
-    /// restructured and translated to idiomatic Rust for use in sky_renderer.
+    /// restructured and translated to idiomatic Rust for use in wilhelm_renderer.
     fn polyline_geometry(points: &[(GLfloat, GLfloat)], stroke_width: f32) -> Geometry {
         const MITER_LIMIT: f32 = 4.0; // Equivalent to JV default
 

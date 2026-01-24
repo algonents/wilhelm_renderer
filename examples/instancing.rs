@@ -1,7 +1,7 @@
-extern crate sky_renderer;
+extern crate wilhelm_renderer;
 
-use sky_renderer::core::{App, Color, Renderable, Renderer, Vec2, Window};
-use sky_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
+use wilhelm_renderer::core::{App, Color, Renderable, Renderer, Vec2, Window};
+use wilhelm_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
 
 const WIDTH: i32 = 1600;
 const HEIGHT: i32 = 1000;

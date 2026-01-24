@@ -1,10 +1,10 @@
-extern crate sky_renderer;
+extern crate wilhelm_renderer;
 
-use sky_renderer::core::engine::glfw::{
+use wilhelm_renderer::core::engine::glfw::{
     glfw_get_platform, GLFW_PLATFORM_WAYLAND, GLFW_PLATFORM_X11,
     GLFW_PLATFORM_COCOA, GLFW_PLATFORM_WIN32,
 };
-use sky_renderer::core::{App, Window};
+use wilhelm_renderer::core::{App, Window};
 
 fn main() {
     let mut  window = Window::new("Hello Window", 800, 600);

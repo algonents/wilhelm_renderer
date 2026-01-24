@@ -1,7 +1,7 @@
-extern crate sky_renderer;
+extern crate wilhelm_renderer;
 
-use sky_renderer::core::{App, Color, Renderable, Renderer, Window};
-use sky_renderer::graphics2d::shapes::{
+use wilhelm_renderer::core::{App, Color, Renderable, Renderer, Window};
+use wilhelm_renderer::graphics2d::shapes::{
     Arc, Circle, Ellipse, Line, MultiPoint, Polygon, Polyline, Rectangle, RoundedRectangle,
     ShapeKind, ShapeRenderable, ShapeStyle, Triangle,
 };

@@ -1,5 +1,5 @@
-use sky_renderer::core::{App, Color, Renderable, Renderer, Window};
-use sky_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
+use wilhelm_renderer::core::{App, Color, Renderable, Renderer, Window};
+use wilhelm_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
 
 use std::sync::{Arc, RwLock};
 use tokio::runtime::Runtime;

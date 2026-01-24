@@ -1,8 +1,8 @@
-extern crate sky_renderer;
+extern crate wilhelm_renderer;
 
 use std::rc::Rc;
-use sky_renderer::core::{App, Attribute, Geometry, Mesh, Renderer, Shader, Window};
-use sky_renderer::core::engine::opengl::{GLfloat, GL_TRIANGLES};
+use wilhelm_renderer::core::{App, Attribute, Geometry, Mesh, Renderer, Shader, Window};
+use wilhelm_renderer::core::engine::opengl::{GLfloat, GL_TRIANGLES};
 
 fn main() {
     let window = Window::new("Hello Window", 800, 600);

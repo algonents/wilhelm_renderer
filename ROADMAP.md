@@ -1,6 +1,6 @@
-# Roadmap: sky-renderer Library Enhancements
+# Roadmap: wilhelm-renderer Library Enhancements
 
-Features to add to the sky-renderer library to support interactive 2D visualization applications (including **SkyTracker**, the ATM radar visualization application).
+Features to add to the wilhelm-renderer library to support interactive 2D visualization applications (including **SkyTracker**, the ATM radar visualization application).
 
 > **Note**: Domain-specific ATM features (aircraft symbols, track management, airspace boundaries, etc.) belong in the separate closed-source **SkyTracker** repository.
 
