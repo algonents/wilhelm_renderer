@@ -85,11 +85,11 @@ fn main() {
     let mut shapes = vec![
         // Create text with white color
         ShapeRenderable::from_shape(
-            200.0,
-            5.0,
-            ShapeKind::Text(Text::new("Hello, Wilhelm Renderer!", "fonts/DejaVuSans.ttf", 32)),
+            160.0,
+            280.0,
+            ShapeKind::Text(Text::new("Hello, Wilhelm renderer!", "fonts/ArchitectsDaughter-Regular.ttf", 48)),
             ShapeStyle {
-                fill: Some(Color::from_rgb(0.90, 0.92, 0.88)),
+                fill: Some(Color::from_rgb(0.94, 0.91, 0.78)),
                 ..Default::default()
             },
         ),
@@ -144,8 +144,8 @@ fn main() {
         ),
         // Point at (600, 300)
         ShapeRenderable::from_shape(
-            600.0,
-            300.0,
+            650.0,
+            260.0,
             ShapeKind::Point,
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
         ),
@@ -185,7 +185,7 @@ fn main() {
             fill_style(Color::from_rgb(0.0, 1.0, 0.0)),
         ),
         // Images (still use dedicated methods)
-        ShapeRenderable::image_with_size(200.0, 300.0, "images/smiley.png", 40.0, 40.0),
+        ShapeRenderable::image_with_size(200.0, 520.0, "images/smiley.png", 40.0, 40.0),
         ShapeRenderable::image(400.0, 500.0, "images/bunny.png"),
     ];
 
