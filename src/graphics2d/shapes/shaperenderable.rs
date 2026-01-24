@@ -2,16 +2,17 @@ use crate::core::engine::opengl::{
     GL_POINTS, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLES, GLfloat, Vec2,
 };
 use crate::core::{
-    Attribute, Color, Geometry, Mesh, Renderable, Renderer, Shader, generate_texture_from_image,
-    load_image,
+    Attribute, Color, FontAtlas, Geometry, Mesh, Renderable, Renderer, Shader,
+    generate_texture_from_image, load_image,
 };
 use crate::graphics2d::shapes::{
     Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Polygon, Polyline, Rectangle,
-    RoundedRectangle, ShapeKind, Triangle,
+    RoundedRectangle, ShapeKind, Text, Triangle,
 };
 use crate::graphics2d::svg::ToSvg;
 use glam::{Mat4, Vec3};
-use std::cell::OnceCell;
+use std::cell::{OnceCell, RefCell};
+use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::rc::Rc;
 
@@ -84,6 +85,59 @@ fn image_shader() -> Rc<Shader> {
         })
         .clone()
     })
+}
+
+thread_local! {
+    static TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
+}
+fn text_shader() -> Rc<Shader> {
+    TEXT_SHADER.with(|cell| {
+        cell.get_or_init(|| {
+            let vert_src = include_str!("../shaders/text.vert");
+            let frag_src = include_str!("../shaders/text.frag");
+            Rc::new(
+                Shader::compile(vert_src, frag_src, None).expect("Failed to compile text shader"),
+            )
+        })
+        .clone()
+    })
+}
+
+/// Font cache key: (font_path, font_size)
+type FontCacheKey = (String, u32);
+
+thread_local! {
+    /// Global font cache - shares FontAtlas instances across text renderables.
+    /// Properly dropped when thread exits, no memory leaks.
+    static FONT_CACHE: RefCell<HashMap<FontCacheKey, Rc<RefCell<FontAtlas>>>> = RefCell::new(HashMap::new());
+}
+
+/// Get or create a FontAtlas from the cache
+fn get_or_create_font_atlas(font_path: &str, font_size: u32) -> Rc<RefCell<FontAtlas>> {
+    FONT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        let key = (font_path.to_string(), font_size);
+
+        if let Some(atlas) = cache.get(&key) {
+            return atlas.clone();
+        }
+
+        // Create new FontAtlas and cache it
+        let atlas = FontAtlas::new(font_path, font_size, 512)
+            .expect("Failed to create font atlas");
+        let atlas_rc = Rc::new(RefCell::new(atlas));
+        cache.insert(key, atlas_rc.clone());
+        atlas_rc
+    })
+}
+
+/// Clear the font cache, releasing all FontAtlas resources.
+/// Call this when changing scenes or when fonts are no longer needed.
+/// Safe to call at any time - new text will recreate atlases as needed.
+pub fn clear_font_cache() {
+    FONT_CACHE.with(|cache| {
+        cache.borrow_mut().clear();
+    });
 }
 
 fn ortho_2d_with_zoom(width: f32, height: f32, zoom: f32) -> Mat4 {
@@ -187,6 +241,9 @@ impl ShapeRenderable {
             ),
             ShapeKind::Image(_) => {
                 unimplemented!("ShapeRenderable::from_shape cannot create Image without path")
+            }
+            ShapeKind::Text(text) => {
+                ShapeRenderable::text(x, y, text, style.fill.unwrap_or(Color::white()))
             }
         }
     }
@@ -361,6 +418,28 @@ impl ShapeRenderable {
         let geometry = ShapeRenderable::ellipse_geometry(ellipse.radius_x, ellipse.radius_y, 64);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
         ShapeRenderable::new(x, y, mesh, ShapeKind::Ellipse(ellipse))
+    }
+
+    fn text(x: f32, y: f32, text: Text, color: Color) -> Self {
+        // Get or create font atlas from cache (shared across text renderables)
+        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size);
+
+        // Generate geometry for all characters
+        let geometry = {
+            let mut atlas = font_atlas.borrow_mut();
+            ShapeRenderable::text_geometry(&text.content, &mut atlas)
+        };
+
+        // Get texture ID while holding borrow
+        let texture_id = font_atlas.borrow().texture_id();
+
+        // Create mesh with text shader and font atlas texture
+        let shader = text_shader();
+        let mut mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
+        mesh.color = Some(color);
+
+        // FontAtlas is owned by FONT_CACHE, properly dropped when thread exits
+        ShapeRenderable::new(x, y, mesh, ShapeKind::Text(text))
     }
 
     pub fn image_with_size(x: f32, y: f32, path: &str, width: f32, height: f32) -> ShapeRenderable {
@@ -783,6 +862,73 @@ impl ShapeRenderable {
         geometry
     }
 
+    /// Generate geometry for text rendering
+    /// Creates textured quads for each character using glyph info from the font atlas
+    fn text_geometry(text: &str, font_atlas: &mut FontAtlas) -> Geometry {
+        let mut vertices: Vec<f32> = Vec::new();
+        let mut cursor_x: f32 = 0.0;
+        let baseline_y: f32 = font_atlas.font_size() as f32; // Start from baseline
+
+        for ch in text.chars() {
+            if let Some(glyph) = font_atlas.get_glyph(ch) {
+                // Skip rendering for whitespace but advance cursor
+                if glyph.width == 0 || glyph.height == 0 {
+                    cursor_x += glyph.advance;
+                    continue;
+                }
+
+                // Calculate quad position
+                let x0 = cursor_x + glyph.bearing_x as f32;
+                let y0 = baseline_y - glyph.bearing_y as f32; // Y increases downward in screen coords
+                let x1 = x0 + glyph.width as f32;
+                let y1 = y0 + glyph.height as f32;
+
+                // UV coordinates from font atlas
+                let u0 = glyph.uv_x;
+                let v0 = glyph.uv_y;
+                let u1 = glyph.uv_x + glyph.uv_width;
+                let v1 = glyph.uv_y + glyph.uv_height;
+
+                // Two triangles per character quad
+                // Triangle 1: bottom-left, bottom-right, top-right
+                vertices.extend_from_slice(&[
+                    x0, y1, u0, v1, // bottom-left
+                    x1, y1, u1, v1, // bottom-right
+                    x1, y0, u1, v0, // top-right
+                ]);
+                // Triangle 2: bottom-left, top-right, top-left
+                vertices.extend_from_slice(&[
+                    x0, y1, u0, v1, // bottom-left
+                    x1, y0, u1, v0, // top-right
+                    x0, y0, u0, v0, // top-left
+                ]);
+
+                cursor_x += glyph.advance;
+            }
+        }
+
+        let values_per_vertex = 4; // x, y, u, v
+
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, values_per_vertex);
+
+        geometry.add_vertex_attribute(Attribute::new(
+            0, // location 0: position
+            2, // x, y
+            values_per_vertex as usize,
+            0,
+        ));
+
+        geometry.add_vertex_attribute(Attribute::new(
+            1, // location 1: texcoord
+            2, // u, v
+            values_per_vertex as usize,
+            2, // offset by 2 floats
+        ));
+
+        geometry
+    }
+
     fn svg_color(&self) -> String {
         self.mesh
             .color
@@ -909,6 +1055,17 @@ impl ToSvg for ShapeRenderable {
             }
             ShapeKind::Arc(_) => {
                 unimplemented!("Arc SVG export is not yet implemented")
+            }
+            ShapeKind::Text(text) => {
+                // SVG text element - simplified, doesn't use font atlas
+                format!(
+                    r#"<text x="{x}" y="{y}" fill="{color}" font-size="{size}">{content}</text>"#,
+                    x = self.x,
+                    y = self.y,
+                    color = self.svg_color(),
+                    size = text.font_size,
+                    content = text.content,
+                )
             }
         }
     }

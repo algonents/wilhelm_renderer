@@ -1,5 +1,5 @@
 use crate::core::engine::glfw::glfw_get_time;
-use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_3f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
+use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_3f, gl_uniform_4f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
 use crate::core::mesh::Mesh;
 use std::ffi::c_void;
 use crate::core::engine::opengl::{
@@ -57,11 +57,19 @@ impl Renderer {
             let (ox, oy) = mesh.screen_offset();
             crate::core::engine::opengl::gl_uniform_2f(offset_loc, ox, oy);
         }
-        
+
         let color_loc = gl_get_uniform_location(mesh.shader.program(), "geometryColor");
         if color_loc != -1 {
             if let Some(color) = mesh.color.as_ref() {
                 gl_uniform_3f(color_loc, color.red_value(), color.green_value(), color.blue_value());
+            }
+        }
+
+        // Also check for u_color (vec4 with alpha) - used by text shader
+        let color4_loc = gl_get_uniform_location(mesh.shader.program(), "u_color");
+        if color4_loc != -1 {
+            if let Some(color) = mesh.color.as_ref() {
+                gl_uniform_4f(color4_loc, color.red_value(), color.green_value(), color.blue_value(), 1.0);
             }
         }
 
@@ -105,6 +113,14 @@ impl Renderer {
         if color_loc != -1 {
             if let Some(color) = mesh.color.as_ref() {
                 gl_uniform_3f(color_loc, color.red_value(), color.green_value(), color.blue_value());
+            }
+        }
+
+        // Also check for u_color (vec4 with alpha) - used by text shader
+        let color4_loc = gl_get_uniform_location(mesh.shader.program(), "u_color");
+        if color4_loc != -1 {
+            if let Some(color) = mesh.color.as_ref() {
+                gl_uniform_4f(color4_loc, color.red_value(), color.green_value(), color.blue_value(), 1.0);
             }
         }
 

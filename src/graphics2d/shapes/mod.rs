@@ -2,6 +2,7 @@ mod shaperenderable;
 
 pub use shaperenderable::ShapeRenderable;
 pub use shaperenderable::ShapeStyle;
+pub use shaperenderable::clear_font_cache;
 
 pub enum ShapeKind {
     Point,
@@ -16,6 +17,7 @@ pub enum ShapeKind {
     Ellipse(Ellipse),
     Arc(Arc),
     Image(Image),
+    Text(Text),
 }
 pub struct Point;
 impl Point{
@@ -140,5 +142,21 @@ pub struct Arc{
 impl Arc {
     pub fn new(radius: f32, start_angle: f32, end_angle: f32) -> Self {
         Self { radius, start_angle, end_angle }
+    }
+}
+
+pub struct Text {
+    pub content: String,
+    pub font_path: String,
+    pub font_size: u32,
+}
+
+impl Text {
+    pub fn new(content: impl Into<String>, font_path: impl Into<String>, font_size: u32) -> Self {
+        Self {
+            content: content.into(),
+            font_path: font_path.into(),
+            font_size,
+        }
     }
 }

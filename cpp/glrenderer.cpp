@@ -246,9 +246,24 @@ extern "C"
         }
     }
 
+    void _glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data)
+    {
+        glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, data);
+    }
+
     void _glGenerateMipmap(GLenum target)
     {
         glGenerateMipmap(target);
+    }
+
+    void _glPixelStorei(GLenum pname, GLint param)
+    {
+        glPixelStorei(pname, param);
+    }
+
+    void _glDeleteTexture(GLuint texture)
+    {
+        glDeleteTextures(1, &texture);
     }
 
     GLuint _glCreateShader(GLenum shaderType)
@@ -384,5 +399,65 @@ extern "C"
     int _glfwGetPlatform()
     {
         return glfwGetPlatform();
+    }
+
+    // ============ FreeType ============
+
+    int _ft_init_freetype(FT_Library *library)
+    {
+        FT_Error error = FT_Init_FreeType(library);
+        if (error) {
+            std::cerr << "[FreeType ERROR] Failed to initialize FreeType library: " << error << std::endl;
+        }
+        return error;
+    }
+
+    void _ft_done_freetype(FT_Library library)
+    {
+        FT_Done_FreeType(library);
+    }
+
+    int _ft_new_face(FT_Library library, const char *filepath, long face_index, FT_Face *face)
+    {
+        FT_Error error = FT_New_Face(library, filepath, face_index, face);
+        if (error) {
+            std::cerr << "[FreeType ERROR] Failed to load font '" << filepath << "': " << error << std::endl;
+        }
+        return error;
+    }
+
+    void _ft_done_face(FT_Face face)
+    {
+        FT_Done_Face(face);
+    }
+
+    int _ft_set_pixel_sizes(FT_Face face, unsigned int width, unsigned int height)
+    {
+        return FT_Set_Pixel_Sizes(face, width, height);
+    }
+
+    int _ft_load_char(FT_Face face, unsigned long char_code, int load_flags)
+    {
+        return FT_Load_Char(face, char_code, load_flags);
+    }
+
+    void _ft_get_glyph_metrics(FT_Face face, FT_GlyphMetrics *metrics)
+    {
+        FT_GlyphSlot glyph = face->glyph;
+        metrics->width = glyph->bitmap.width;
+        metrics->height = glyph->bitmap.rows;
+        metrics->bearing_x = glyph->bitmap_left;
+        metrics->bearing_y = glyph->bitmap_top;
+        metrics->advance = glyph->advance.x;  // in 1/64th pixels
+    }
+
+    unsigned char *_ft_get_glyph_bitmap(FT_Face face)
+    {
+        return face->glyph->bitmap.buffer;
+    }
+
+    int _ft_get_glyph_bitmap_pitch(FT_Face face)
+    {
+        return face->glyph->bitmap.pitch;
     }
 }

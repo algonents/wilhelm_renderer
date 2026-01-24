@@ -8,7 +8,9 @@ mod color;
 mod texture;
 mod image;
 pub mod engine;
+mod font;
 
+pub use self::font::{FontAtlas, GlyphInfo};
 pub use self::geometry::Attribute;
 pub use self::geometry::Geometry;
 pub use self::engine::opengl::Vec2;
