@@ -1,5 +1,5 @@
 use crate::core::engine::glfw::glfw_get_time;
-use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_3f, gl_uniform_4f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
+use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_1f, gl_uniform_3f, gl_uniform_4f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
 use crate::core::mesh::Mesh;
 use std::ffi::c_void;
 use crate::core::engine::opengl::{
@@ -9,16 +9,16 @@ use crate::core::engine::opengl::{
 use crate::core::window::WindowHandle;
 
 pub struct Renderer {
-    pub zoom_level: f32,
     pub window_handle: WindowHandle
 }
+
 pub trait Renderable {
     fn render(&mut self, renderer: &Renderer);
 }
 
 impl Renderer {
     pub fn new(window_handle: WindowHandle) -> Self {
-        Renderer {zoom_level:1.0, window_handle}
+        Renderer { window_handle }
     }
 
     pub fn set_point_size(&self, point_size: GLfloat) {
@@ -56,6 +56,11 @@ impl Renderer {
         if offset_loc != -1 {
             let (ox, oy) = mesh.screen_offset();
             crate::core::engine::opengl::gl_uniform_2f(offset_loc, ox, oy);
+        }
+
+        let scale_loc = gl_get_uniform_location(mesh.shader.program(), "u_scale");
+        if scale_loc != -1 {
+            gl_uniform_1f(scale_loc, mesh.scale());
         }
 
         let color_loc = gl_get_uniform_location(mesh.shader.program(), "geometryColor");
@@ -107,6 +112,11 @@ impl Renderer {
         let off_loc = gl_get_uniform_location(mesh.shader.program(), "u_screen_offset");
         if off_loc != -1 {
             crate::core::engine::opengl::gl_uniform_2f(off_loc, 0.0, 0.0);
+        }
+
+        let scale_loc = gl_get_uniform_location(mesh.shader.program(), "u_scale");
+        if scale_loc != -1 {
+            gl_uniform_1f(scale_loc, mesh.scale());
         }
 
         let color_loc = gl_get_uniform_location(mesh.shader.program(), "geometryColor");

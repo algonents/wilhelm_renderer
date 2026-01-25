@@ -10,14 +10,13 @@ use crate::graphics2d::shapes::{
     RoundedRectangle, ShapeKind, Text, Triangle,
 };
 use crate::graphics2d::svg::ToSvg;
-use glam::{Mat4, Vec3};
+use glam::Mat4;
 use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::rc::Rc;
 
 const MIN_STROKE_WIDTH: f32 = 1.5;
-const SCALE_FACTOR: f32 = 1.0;
 
 #[derive(Clone, Debug)]
 pub struct ShapeStyle {
@@ -166,31 +165,22 @@ pub fn clear_font_cache() {
     });
 }
 
-fn ortho_2d_with_zoom(width: f32, height: f32, zoom: f32) -> Mat4 {
-    let half_w = width * 0.5 / zoom;
-    let half_h = height * 0.5 / zoom;
-
-    let left = width * 0.5 - half_w;
-    let right = width * 0.5 + half_w;
-    let top = height * 0.5 - half_h;
-    let bottom = height * 0.5 + half_h;
-
-    Mat4::orthographic_rh_gl(left, right, bottom, top, 0.0, 1.0)
+fn ortho_2d(width: f32, height: f32) -> Mat4 {
+    Mat4::orthographic_rh_gl(0.0, width, height, 0.0, -1.0, 1.0)
 }
 pub struct ShapeRenderable {
     x: f32,
     y: f32,
+    scale: f32,
     mesh: Mesh,
     shape: ShapeKind,
 }
 impl Renderable for ShapeRenderable {
     fn render(&mut self, renderer: &Renderer) {
         let (window_width, window_height) = renderer.window_handle.size();
-        let transform = ortho_2d_with_zoom(window_width as f32, window_height as f32, renderer.zoom_level)
-        // use the line below if you want to keep objects of constant size during zoom    
-        //* Mat4::from_scale(Vec3::splat(SCALE_FACTOR/renderer.zoom_level));
-            * Mat4::from_scale(Vec3::splat(SCALE_FACTOR));
+        let transform = ortho_2d(window_width as f32, window_height as f32);
         self.mesh.set_transform(transform);
+        self.mesh.set_scale(self.scale);
 
         if self.mesh.geometry.instance_count() > 0 {
             // instanced: u_offset = (0,0), positions come from attrib 1
@@ -205,12 +195,20 @@ impl Renderable for ShapeRenderable {
 
 impl ShapeRenderable {
     fn new(x: f32, y: f32, mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x, y, mesh, shape }
+        Self { x, y, scale: 1.0, mesh, shape }
     }
 
     pub fn set_position(&mut self, x: f32, y: f32) {
         self.x = x;
         self.y = y;
+    }
+
+    pub fn set_scale(&mut self, scale: f32) {
+        self.scale = scale;
+    }
+
+    pub fn scale(&self) -> f32 {
+        self.scale
     }
     pub fn from_shape(x: f32, y: f32, shape: ShapeKind, style: ShapeStyle) -> Self {
         match shape {
