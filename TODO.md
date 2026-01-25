@@ -37,7 +37,7 @@ Technical debt and improvement areas identified in code review.
 - [ ] `renderer.rs:48,58,64,94,102,107` - Cache uniform locations after shader compilation instead of looking up by string every draw call
 - [ ] `renderer.rs:45-46,91-92` - Set `gl_enable(GL_BLEND)` and `gl_blend_func` once at init, not every draw call
 - [ ] `shaperenderable.rs:86` - Use cached window size from `InnerWindow` instead of calling `gl_get_integerv` every frame
-- [ ] `renderer.rs:43,81` - Remove unnecessary VAO unbind between consecutive draws
+- [x] `renderer.rs:43,81` - Remove unnecessary VAO unbind between consecutive draws
 
 ### Architectural (Medium Priority)
 
