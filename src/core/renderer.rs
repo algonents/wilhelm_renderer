@@ -83,7 +83,7 @@ impl Renderer {
             0,
             mesh.geometry.vertex_count(),
         );
-        mesh.geometry.unbind();
+
         if mesh.texture.is_some() {
             gl_bind_texture(GL_TEXTURE_2D, 0);
         }
@@ -136,7 +136,6 @@ impl Renderer {
             mesh.geometry.instance_count().max(0),
         );
 
-        mesh.geometry.unbind();
         if mesh.texture.is_some() {
             gl_bind_texture(GL_TEXTURE_2D, 0);
         }
