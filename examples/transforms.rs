@@ -47,7 +47,7 @@ fn main() {
 
     app.on_render(move || {
         // Get current viewport size in case window was resized
-        let (width, height) = renderer.viewport_size();
+        let (width, height) = renderer.window_handle.size();
 
         let transform = build_transform(width as f32, height as f32, renderer.get_time());
         mesh.set_transform(transform);
