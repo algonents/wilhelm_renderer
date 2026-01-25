@@ -9,7 +9,7 @@ use wilhelm_renderer::graphics2d::shapes::{
 use std::cell::Cell;
 
 thread_local! {
-    static ZOOM_LEVEL: Cell<f32> = Cell::new(1.0);
+    static SCALE_LEVEL: Cell<f32> = Cell::new(1.0);
 }
 
 fn stroke_style(color: Color, width: f32) -> ShapeStyle {
@@ -30,21 +30,21 @@ fn fill_style(color: Color) -> ShapeStyle {
 
 fn main() {
     let mut window = Window::new("Shapes", 800, 800, Color::from_rgb(0.07, 0.13, 0.17));
-    let mut renderer = Renderer::new(window.handle());
+    let renderer = Renderer::new(window.handle());
     renderer.set_point_size(6.0);
 
     window.on_scroll(move |_, y_offset| {
-        let zoom_step = 1.1;
-        let zoom_factor = if y_offset > 0.0 {
-            zoom_step
+        let scale_step = 1.1;
+        let scale_factor = if y_offset > 0.0 {
+            scale_step
         } else {
-            1.0 / zoom_step
+            1.0 / scale_step
         };
 
-        ZOOM_LEVEL.with(|z| {
-            let new_zoom = (z.get() * zoom_factor).clamp(0.1, 10.0);
-            z.set(new_zoom);
-            println!("zoom level: {}", new_zoom);
+        SCALE_LEVEL.with(|s| {
+            let new_scale = (s.get() * scale_factor).clamp(0.1, 10.0);
+            s.set(new_scale);
+            println!("scale level: {}", new_scale);
         });
     });
 
@@ -160,8 +160,8 @@ fn main() {
 
     app.on_render(move || {
         for shape in &mut shapes {
-            ZOOM_LEVEL.with(|z| {
-                renderer.zoom_level = z.get();
+            SCALE_LEVEL.with(|s| {
+                shape.set_scale(s.get());
             });
             shape.render(&renderer);
         }

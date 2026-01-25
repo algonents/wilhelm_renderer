@@ -11,6 +11,7 @@ pub struct Mesh {
     pub shader: Rc<Shader>,
     transform: Mat4,
     screen_offset: Option<(f32, f32)>,
+    scale: f32,
     pub color: Option<Color>,
     pub texture: Option<GLuint>,
 }
@@ -23,28 +24,31 @@ impl Mesh {
             shader,
             transform: Mat4::IDENTITY,
             screen_offset: None,
+            scale: 1.0,
             color: None,
             texture: None
         }
     }
-    
+
     pub fn with_color(shader: Rc<Shader>, geometry: Geometry, color: Option<Color>) -> Self {
         Self {
             geometry,
             shader,
             transform: Mat4::IDENTITY,
             screen_offset: None,
+            scale: 1.0,
             color,
             texture: None
         }
     }
-    
+
     pub fn with_texture(shader: Rc<Shader>, geometry: Geometry, texture: Option<GLuint>)->Self{
         Self {
             geometry,
             shader,
             transform: Mat4::IDENTITY,
             screen_offset: None,
+            scale: 1.0,
             color: None,
             texture
         }
@@ -69,5 +73,12 @@ impl Mesh {
     }
     pub fn screen_offset(&self) -> (f32, f32) {
         self.screen_offset.unwrap_or((0.0, 0.0))
+    }
+
+    pub fn set_scale(&mut self, scale: f32) {
+        self.scale = scale;
+    }
+    pub fn scale(&self) -> f32 {
+        self.scale
     }
 }
