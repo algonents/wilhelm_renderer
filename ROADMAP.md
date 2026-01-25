@@ -16,11 +16,19 @@ Features to add to the wilhelm-renderer library to support interactive 2D visual
 - [x] Support text anchoring (left, center, right)
 - [ ] Batch multiple text draws into single draw call (future optimization)
 
-## Phase 2: Coordinate System & Projection
+## Phase 2: Coordinate System & Projection (In Progress)
 
-- [ ] Define `Projection` trait for coordinate transforms
-- [ ] Implement identity projection (screen coordinates)
+### Foundation ✓ Complete
+- [x] Renderer is stateless (no zoom/viewport state)
+- [x] ShapeRenderable works in screen/pixel coordinates
+- [x] Per-shape `scale` property for intrinsic size adjustment (scales around shape center)
+- [x] Simple orthographic projection: screen coordinates → NDC
+
+### Remaining
+- [ ] Define `Projection` trait for world-to-screen coordinate transforms
+- [ ] Implement identity projection (screen coordinates passthrough)
 - [ ] World-to-screen and screen-to-world conversion functions
+- [ ] Viewport struct (center, scale/bounds) for pan/zoom at application level
 - [ ] Unit tests for projection accuracy
 
 > **SkyTracker**: Stereographic projection, lat/lon viewport, nautical mile units
@@ -64,7 +72,8 @@ The current architecture uses 1 draw call per shape, which becomes a CPU bottlen
 ### Instancing Enhancements (High Priority)
 - [ ] Per-instance rotation attribute (for oriented symbols)
 - [ ] Per-instance color attribute (vec4)
-- [ ] Per-instance scale attribute (vec2 or uniform float)
+- [x] Per-shape scale via `u_scale` uniform (shared across instances)
+- [ ] Per-instance scale attribute (for varying sizes within batch)
 - [ ] Generic `InstancedShape` API supporting position + rotation + color + scale
 
 ### Draw Call Batching
@@ -77,7 +86,7 @@ The current architecture uses 1 draw call per shape, which becomes a CPU bottlen
 ### Render State Optimization
 - [ ] Cache uniform locations after shader compilation (from TODO.md)
 - [ ] Set GL state (blend, depth) once at init, not per draw (from TODO.md)
-- [ ] Minimize VAO binds between draws (from TODO.md)
+- [x] Minimize VAO binds between draws (removed unnecessary unbind calls)
 - [ ] Sort draws by shader to reduce shader switches
 
 ### Culling
@@ -114,7 +123,7 @@ External dependencies:
 | Milestone | Deliverable | Status |
 |-----------|-------------|--------|
 | M1 | Text rendering working | ✓ Complete |
-| M2 | Projection trait, picking/selection | Pending |
+| M2 | Projection trait, picking/selection | In Progress |
 | M3 | Pan/zoom controls | Pending |
 | M4 | Layer system | Pending |
 | M5 | Trail rendering, performance validated | Pending |
