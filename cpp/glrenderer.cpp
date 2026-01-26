@@ -346,6 +346,11 @@ extern "C"
         glVertexAttribDivisor(index, divisor);
     }
 
+    void _glVertexAttrib4f(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
+    {
+        glVertexAttrib4f(index, v0, v1, v2, v3);
+    }
+
     void _glDrawElements(GLenum mode, GLsizei count, GLenum type, GLuint offset)
     {
         glDrawElements(mode, count, type, (void *)(offset));

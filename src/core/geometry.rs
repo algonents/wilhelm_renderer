@@ -1,4 +1,5 @@
-use crate::core::engine::opengl::{GL_ARRAY_BUFFER, GLboolean, GLenum, GLfloat, GLint, GLsizei, GLsizeiptr, GLuint, Vec2, gl_bind_buffer, gl_bind_vertex_array, gl_buffer_data, gl_buffer_data_empty, gl_buffer_sub_data_vec2, gl_delete_buffer, gl_delete_vertex_array, gl_enable_vertex_attrib_array, gl_gen_buffer, gl_gen_vertex_array, gl_vertex_attrib_divisor, gl_vertex_attrib_pointer_float};
+use crate::core::engine::opengl::{GL_ARRAY_BUFFER, GLboolean, GLenum, GLfloat, GLint, GLsizei, GLsizeiptr, GLuint, Vec2, gl_bind_buffer, gl_bind_vertex_array, gl_buffer_data, gl_buffer_data_empty, gl_buffer_sub_data, gl_buffer_sub_data_vec2, gl_delete_buffer, gl_delete_vertex_array, gl_enable_vertex_attrib_array, gl_gen_buffer, gl_gen_vertex_array, gl_vertex_attrib_divisor, gl_vertex_attrib_pointer_float};
+use crate::core::color::Color;
 
 #[derive(Debug, Clone)]
 pub struct Attribute {
@@ -38,6 +39,18 @@ impl Attribute {
             divisor: 1,
         }
     }
+
+    pub fn instanced_vec4(location: u32) -> Self {
+        // tightly packed vec4 (e.g., RGBA color), divisor=1
+        Self {
+            location,
+            size: 4,
+            normalize: GLboolean::FALSE,
+            stride: (4 * std::mem::size_of::<GLfloat>()) as GLsizei,
+            offset: 0,
+            divisor: 1,
+        }
+    }
 }
 
 /// A GPU-backed buffer representing a drawable shape or mesh.
@@ -51,13 +64,16 @@ pub struct Geometry {
     vertex_count: i32,
     drawing_mode: GLenum,
     attributes: Vec<Attribute>,
-    // NEW
     instance_vbo: GLuint,
+    instance_color_vbo: GLuint,
     instance_count: i32,
 }
 
 impl Drop for Geometry {
     fn drop(&mut self) {
+        if self.instance_color_vbo != 0 {
+            gl_delete_buffer(self.instance_color_vbo);
+        }
         if self.instance_vbo != 0 {
             gl_delete_buffer(self.instance_vbo);
         }
@@ -93,6 +109,7 @@ impl Geometry {
             attributes: Vec::new(),
             drawing_mode,
             instance_vbo: 0,
+            instance_color_vbo: 0,
             instance_count: 0,
         }
     }
@@ -169,9 +186,8 @@ impl Geometry {
         gl_bind_vertex_array(self.vao);
         gl_bind_buffer(GL_ARRAY_BUFFER, self.instance_vbo);
 
-        // Allocate empty buffer of required capacity (you can also upload a zero slice)
         let bytes = (max_instances * 2 * std::mem::size_of::<GLfloat>()) as GLsizei;
-        crate::core::engine::opengl::gl_buffer_data_empty(GL_ARRAY_BUFFER, bytes as GLsizeiptr); // add this tiny helper in FFI OR upload a zero slice
+        gl_buffer_data_empty(GL_ARRAY_BUFFER, bytes as GLsizeiptr);
 
         // Attribute at location=1, vec2, divisor=1
         let inst_attr = Attribute::instanced_vec2(1);
@@ -184,6 +200,35 @@ impl Geometry {
             inst_attr.offset,
         );
         gl_vertex_attrib_divisor(inst_attr.location, 1);
+
+        gl_bind_vertex_array(0);
+        gl_bind_buffer(GL_ARRAY_BUFFER, 0);
+
+        // Also allocate the color instance buffer
+        self.enable_instancing_color(max_instances);
+    }
+
+    pub fn enable_instancing_color(&mut self, max_instances: usize) {
+        if self.instance_color_vbo == 0 {
+            self.instance_color_vbo = gl_gen_buffer();
+        }
+        gl_bind_vertex_array(self.vao);
+        gl_bind_buffer(GL_ARRAY_BUFFER, self.instance_color_vbo);
+
+        let bytes = (max_instances * 4 * std::mem::size_of::<GLfloat>()) as GLsizei;
+        gl_buffer_data_empty(GL_ARRAY_BUFFER, bytes as GLsizeiptr);
+
+        // Attribute at location=2, vec4 (RGBA), divisor=1
+        let color_attr = Attribute::instanced_vec4(2);
+        gl_enable_vertex_attrib_array(color_attr.location);
+        gl_vertex_attrib_pointer_float(
+            color_attr.location,
+            color_attr.size,
+            color_attr.normalize,
+            color_attr.stride,
+            color_attr.offset,
+        );
+        gl_vertex_attrib_divisor(color_attr.location, 1);
 
         gl_bind_vertex_array(0);
         gl_bind_buffer(GL_ARRAY_BUFFER, 0);
@@ -203,6 +248,20 @@ impl Geometry {
         gl_bind_buffer(GL_ARRAY_BUFFER, 0);
 
         self.instance_count = xy.len() as i32;
+    }
+
+    pub fn update_instance_colors(&mut self, colors: &[Color]) {
+        if self.instance_color_vbo == 0 { return; }
+        gl_bind_vertex_array(self.vao);
+        gl_bind_buffer(GL_ARRAY_BUFFER, self.instance_color_vbo);
+
+        // orphan + upload (Color is #[repr(C)] with 4 f32 fields)
+        let bytes = (colors.len() * std::mem::size_of::<Color>()) as GLsizei;
+        gl_buffer_data_empty(GL_ARRAY_BUFFER, bytes as GLsizeiptr);
+        gl_buffer_sub_data(GL_ARRAY_BUFFER, 0, colors);
+
+        gl_bind_vertex_array(0);
+        gl_bind_buffer(GL_ARRAY_BUFFER, 0);
     }
 
     pub fn clear_instancing(&mut self) {

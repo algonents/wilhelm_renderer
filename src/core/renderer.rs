@@ -1,5 +1,5 @@
 use crate::core::engine::glfw::glfw_get_time;
-use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_1f, gl_uniform_3f, gl_uniform_4f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
+use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_1f, gl_uniform_3f, gl_uniform_4f, gl_vertex_attrib_4f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
 use crate::core::mesh::Mesh;
 use std::ffi::c_void;
 use crate::core::engine::opengl::{
@@ -41,6 +41,10 @@ impl Renderer {
 
         gl_enable(GL_BLEND);
         gl_blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        // Reset instance color attribute to (0,0,0,0) so the shader falls back to
+        // the geometryColor uniform. OpenGL defaults disabled attributes to (0,0,0,1).
+        gl_vertex_attrib_4f(2, 0.0, 0.0, 0.0, 0.0);
 
         let transform_loc = gl_get_uniform_location(mesh.shader.program(), "u_Transform");
         if transform_loc != -1 {

@@ -34,19 +34,26 @@ fn main() {
     let instance_count = COLS * ROWS;
     dots.create_multiple_instances(instance_count);
 
-    // Static base grid
+    // Static base grid with per-instance colors
     let mut base_positions: Vec<Vec2> = Vec::with_capacity(instance_count);
+    let mut colors: Vec<Color> = Vec::with_capacity(instance_count);
     for j in 0..ROWS {
         for i in 0..COLS {
             base_positions.push(Vec2::new(
                 ORIGIN_X + i as f32 * SPACING,
                 ORIGIN_Y + j as f32 * SPACING,
             ));
+            // Gradient: red increases left-to-right, blue increases top-to-bottom
+            let r = i as f32 / COLS as f32;
+            let b = j as f32 / ROWS as f32;
+            let g = 0.4;
+            colors.push(Color::from_rgb(r, g, b));
         }
     }
 
     let mut positions = base_positions.clone();
     dots.set_instance_positions(&positions);
+    dots.set_instance_colors(&colors);
 
     let mut app = App::new(window);
 

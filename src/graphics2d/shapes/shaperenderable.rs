@@ -280,6 +280,10 @@ impl ShapeRenderable {
         self.mesh.geometry.update_instance_xy(positions);
     }
 
+ slick    pub fn set_instance_colors(&mut self, colors: &[Color]) {
+        self.mesh.geometry.update_instance_colors(colors);
+    }
+
     pub fn clear_instances(&mut self) {
         self.mesh.geometry.clear_instancing();
     }

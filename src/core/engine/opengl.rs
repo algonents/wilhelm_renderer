@@ -143,6 +143,7 @@ unsafe extern "C" {
     fn _glDrawArrays(mode: GLenum, first: GLint, count: GLsizei);
     fn _glDrawArraysInstanced(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei);
     fn _glVertexAttribDivisor(index: GLuint, divisor: GLuint);
+    fn _glVertexAttrib4f(index: GLuint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat);
     fn _glDrawElements(mode: GLenum, count: GLsizei, element_type: GLenum, offset: GLuint);
 
     fn _glGetUniformLocation(program: GLuint, name: *const GLchar) -> GLint;
@@ -362,6 +363,12 @@ pub fn gl_draw_arrays_instanced(
 pub fn gl_vertex_attrib_divisor(index: GLuint, divisor: GLuint) {
     unsafe {
         _glVertexAttribDivisor(index, divisor);
+    }
+}
+
+pub fn gl_vertex_attrib_4f(index: GLuint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat) {
+    unsafe {
+        _glVertexAttrib4f(index, v0, v1, v2, v3);
     }
 }
 
