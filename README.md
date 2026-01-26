@@ -5,11 +5,16 @@
 
 wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
 Its goal is to provide a robust foundation for rendering 2D shapes and visualizing 2-dimensional 
-data in real time.
+data and animations in real time.
 
 The current release offers low-level OpenGL bindings and basic rendering capabilities.
 It is not yet production-ready. Future releases will expand the feature set with additional
 drawing primitives.
+
+## 🚧 Status
+
+⚠️ *APIs are still evolving --  always use the latest release*.
+
 
 ## ✨ Features
 
@@ -31,10 +36,6 @@ Other features:
 - Basic animation support
 - Basic zoom in/out support
 - Experimental SVG output support
-
-## 🚧 Status
-
-⚠️ *APIs are still evolving --  always use the latest release*.
 
 ### 📦 Examples code
 
