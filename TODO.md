@@ -44,6 +44,13 @@ Technical debt and improvement areas identified in code review.
 - [ ] Implement draw call batching for rendering many shapes of the same type
 - [ ] Sort draws by shader to minimize shader switches
 - [ ] `shaperenderable.rs:283,290` - Scale circle/ellipse segment count based on radius/screen size (currently hardcoded 100/64)
+- [ ] `shaperenderable.rs:181` - `ortho_2d()` recomputes the same orthographic matrix for every shape every frame. Cache and reuse when window size hasn't changed.
+- [ ] `shaperenderable.rs:182-183` - `set_transform` and `set_scale` called per shape per frame with identical values. Could be set once per frame.
+- [ ] Camera state uses thread-local `Cell` in examples because `on_scroll` and `on_render` are separate closures that can't share mutable references. Consider passing a context/state struct into callbacks, or an event queue pattern.
+- [ ] No built-in convention for shapes that scale with zoom (e.g., airspace boundaries, range rings) vs shapes that stay fixed in screen pixels (e.g., markers, labels). `set_scale()` exists but must be manually driven from camera state each frame. Consider a `ScaleMode::World` / `ScaleMode::Screen` enum on `ShapeRenderable`.
+- [ ] Instanced draw path (`renderer.rs:112-115`) hardcodes `u_screen_offset = (0,0)` and uses vertex attributes for positions. To batch camera-projected shapes via instancing, CPU must pre-project all positions into the instance buffer each frame. An alternative: pass camera view-projection matrix as a uniform and let the GPU project world coordinates directly. Would require shader changes.
+- [ ] Text labels have unique geometry per string — cannot use the current instancing path. Batching text requires a different strategy (shared glyph quad geometry with per-instance UV offsets, or a glyph-level instancing approach).
+- [ ] No matrix stack or hierarchical transforms. Each shape has an isolated transform (projection + offset). Adding layers, groups, or parent-child transform relationships would require rethinking how `u_Transform` is composed.
 
 ### Memory (Low Priority)
 

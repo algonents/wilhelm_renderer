@@ -16,7 +16,7 @@ Features to add to the wilhelm-renderer library to support interactive 2D visual
 - [x] Support text anchoring (left, center, right)
 - [ ] Batch multiple text draws into single draw call (future optimization)
 
-## Phase 2: Coordinate System & Projection (In Progress)
+## Phase 2: Coordinate System & Projection ✓ Complete
 
 ### Foundation ✓ Complete
 - [x] Renderer is stateless (no zoom/viewport state)
@@ -24,12 +24,24 @@ Features to add to the wilhelm-renderer library to support interactive 2D visual
 - [x] Per-shape `scale` property for intrinsic size adjustment (scales around shape center)
 - [x] Simple orthographic projection: screen coordinates → NDC
 
+### Projection System ✓ Complete
+- [x] Define `Projection` trait for world-to-screen coordinate transforms
+- [x] Implement `IdentityProjection` (screen coordinates passthrough)
+- [x] `Camera2D` struct with center, scale (pixels per world unit), screen size
+- [x] `world_to_screen` and `screen_to_world` conversion
+- [x] Pan (world and screen delta), zoom (center and zoom-at-point)
+- [x] `world_bounds()` for visible region query (frustum culling ready)
+- [x] Unit tests for projection accuracy (7 tests: roundtrip, offset, scale, bounds, zoom)
+
+### Geographic Projection ✓ Complete
+- [x] `wgs84_to_mercator` / `mercator_to_wgs84` coordinate conversion (f64 intermediate precision)
+- [x] Unit tests for Mercator conversion (roundtrip, origin, ordering)
+- [x] Waypoints example rewritten: ShapeRenderable triangles + text labels, Camera2D projection from WGS84
+- [x] Camera example: zoom-to-cursor with shapes in world coordinates
+
 ### Remaining
-- [ ] Define `Projection` trait for world-to-screen coordinate transforms
-- [ ] Implement identity projection (screen coordinates passthrough)
-- [ ] World-to-screen and screen-to-world conversion functions
-- [ ] Viewport struct (center, scale/bounds) for pan/zoom at application level
-- [ ] Unit tests for projection accuracy
+- [ ] Mouse drag to pan (currently zoom-only in examples)
+- [ ] Batch multiple text draws into single draw call (from Phase 1)
 
 > **SkyTracker**: Stereographic projection, lat/lon viewport, nautical mile units
 
@@ -44,10 +56,10 @@ Features to add to the wilhelm-renderer library to support interactive 2D visual
 
 ### Pan/Zoom Controls
 - [ ] Mouse drag to pan (update viewport center)
-- [ ] Scroll wheel to zoom (update viewport range)
+- [x] Scroll wheel to zoom (Camera2D zoom_at with cursor position)
 - [ ] Keyboard shortcuts (arrow keys for pan, +/- for zoom)
 - [ ] Zoom-to-fit selected entities
-- [ ] Min/max zoom limits
+- [x] Min/max zoom limits (clamp in examples)
 
 ## Phase 4: Layer System
 
@@ -123,8 +135,8 @@ External dependencies:
 | Milestone | Deliverable | Status |
 |-----------|-------------|--------|
 | M1 | Text rendering working | ✓ Complete |
-| M2 | Projection trait, picking/selection | In Progress |
-| M3 | Pan/zoom controls | Pending |
+| M2 | Projection trait + Camera2D + Mercator | ✓ Complete |
+| M3 | Picking/selection, pan/zoom controls | Pending |
 | M4 | Layer system | Pending |
 | M5 | Trail rendering, performance validated | Pending |
 
