@@ -17,9 +17,9 @@ struct Ball {
 const BALL_RADIUS: f32 = 5.0;
 
 fn main() {
-    let window = Window::new("Bouncing Balls — Instanced", 1600, 1200, Color::from_rgb(0.07, 0.13, 0.17));
+    let window = Window::new("Bouncing Balls — Instanced", 1280, 720, Color::from_rgb(0.07, 0.13, 0.17));
 
-    let mut balls = initialize_balls(10_000, 1600.0, 1200.0);
+    let mut balls = initialize_balls(10_000, window.width() as f32, window.height() as f32);
 
 
     let renderer = Renderer::new(window.handle());
