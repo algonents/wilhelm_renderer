@@ -1,7 +1,7 @@
 
-
-
-<img src="images/logo.svg" alt="Wilhelm Renderer logo" width="500">
+<p align="center">
+  <img src="images/logo.svg" alt="Wilhelm Renderer" width="520">
+</p>
 
 wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
 Its goal is to provide a robust foundation for rendering 2D shapes and visualizing 2-dimensional 
