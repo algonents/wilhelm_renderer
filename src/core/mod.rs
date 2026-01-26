@@ -9,6 +9,7 @@ mod texture;
 mod image;
 pub mod engine;
 mod font;
+mod projection;
 
 pub use self::font::{FontAtlas, GlyphInfo};
 pub use self::geometry::Attribute;
@@ -23,3 +24,4 @@ pub use self::app::App;
 pub use self::color::Color;
 pub use texture::generate_texture_from_image;
 pub use image::load_image;
+pub use self::projection::{Projection, IdentityProjection, Camera2D, wgs84_to_mercator, mercator_to_wgs84};

@@ -4,6 +4,7 @@ pub use shaperenderable::ShapeRenderable;
 pub use shaperenderable::ShapeStyle;
 pub use shaperenderable::clear_font_cache;
 
+#[derive(Clone)]
 pub enum ShapeKind {
     Point,
     MultiPoint(MultiPoint),
@@ -19,6 +20,8 @@ pub enum ShapeKind {
     Image(Image),
     Text(Text),
 }
+
+#[derive(Clone)]
 pub struct Point;
 impl Point{
     pub fn new() -> Self{
@@ -26,6 +29,7 @@ impl Point{
     }
 }
 
+#[derive(Clone)]
 pub struct MultiPoint {
     pub points: Vec<(f32, f32)>,
 }
@@ -37,6 +41,7 @@ impl MultiPoint {
 }
 
 
+#[derive(Clone, Copy)]
 pub struct Line {
     pub x2: f32,
     pub y2: f32,
@@ -48,6 +53,7 @@ impl Line {
     }
 }
 
+#[derive(Clone)]
 pub struct Polyline {
     pub points: Vec<(f32, f32)>,
 }
@@ -57,6 +63,7 @@ impl Polyline {
         Self { points }
     }
 }
+#[derive(Clone, Copy)]
 pub struct Triangle {
     pub vertices: [(f32, f32); 3],
 }
@@ -68,6 +75,7 @@ impl Triangle {
 }
 
 
+#[derive(Clone, Copy)]
 pub struct Rectangle {
     pub width: f32,
     pub height: f32,
@@ -79,6 +87,7 @@ impl Rectangle {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct RoundedRectangle {
     pub width: f32,
     pub height: f32,
@@ -91,6 +100,7 @@ impl RoundedRectangle {
     }
 }
 
+#[derive(Clone)]
 pub struct Polygon {
     pub points: Vec<(f32, f32)>,
 }
@@ -101,6 +111,7 @@ impl Polygon {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Circle {
     pub radius: f32,
 }
@@ -111,6 +122,7 @@ impl Circle {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Ellipse {
     pub radius_x: f32,
     pub radius_y: f32,
@@ -122,6 +134,7 @@ impl Ellipse {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Image {
     pub width: f32,
     pub height: f32,
@@ -133,7 +146,8 @@ impl Image {
     }
 }
 
-pub struct Arc{
+#[derive(Clone, Copy)]
+pub struct Arc {
     pub radius: f32,
     pub start_angle: f32,
     pub end_angle: f32,
@@ -145,6 +159,7 @@ impl Arc {
     }
 }
 
+#[derive(Clone)]
 pub struct Text {
     pub content: String,
     pub font_path: String,
