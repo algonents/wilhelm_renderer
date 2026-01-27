@@ -119,3 +119,4 @@ Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, C
 - **ROADMAP.md**: Planned library enhancements (text rendering, projections, interaction, layers, trails) to support SkyTracker and other visualization applications.
 - **TODO.md**: Technical debt and improvement areas including resource leaks, FFI issues, performance optimizations, and code style cleanup.
 - **RADAR PRIMITIVES.md**: Graphics primitives needed for ATM radar visualization, organized by priority (critical, important, nice to have).
+- **CHANGELOG.md**: Record of API changes, improvements, and known limitations.
