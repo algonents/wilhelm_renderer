@@ -2,7 +2,7 @@
 name = "wilhelm_renderer"
 version = "0.1.0"
 edition = "2024"
-authors = ["Anwar Ludin anwar.ludin@algonents.com"]
+authors = ["Anwar Ludin <anwar.ludin@algonents.com>"]
 license = "MIT"
 
 description = "A minimalist 2D data rendering engine"
@@ -10,6 +10,16 @@ repository = "https://github.com/algonents/wilhelm-renderer"
 readme = "README.md"
 keywords = ["opengl", "visualization"]
 categories = ["graphics", "rendering::graphics-api"]
+exclude = [
+    ".idea/",
+    "images/",
+    "CLAUDE.md",
+    "MEMORY PERFORMANCE.md",
+    "OPENGL.md",
+    "RADAR PRIMITIVES.md",
+    "ROADMAP.md",
+    "TODO.md",
+]
 
 [dependencies]
 glam = "0.30.4"

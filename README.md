@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="images/logo.svg" alt="Wilhelm Renderer" width="520">
+  <img src="https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/logo.svg" alt="Wilhelm Renderer" width="520">
 </p>
 
 wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
@@ -87,14 +87,14 @@ fn main() {
 ```
 For a full example, see [shapes.rs](https://github.com/algonents/wilhelm-renderer/tree/master/examples/shapes.rs).
 
-![Shapes](images/shapes.png)
+![Shapes](https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/shapes.png)
 
 Additional examples:
 - `bouncing_balls_instanced.rs` – demonstrates instanced rendering with 10,000 animated balls
   *(use `cargo run` inside the `examples/bouncing_balls` folder)*
 
 
-  ![Bouncing Balls](images/bouncing_balls_instanced.png)
+  ![Bouncing Balls](https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/bouncing_balls_instanced.png)
 
 ## 🐞 Issues
 
