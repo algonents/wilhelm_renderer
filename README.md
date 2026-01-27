@@ -90,9 +90,6 @@ For a full example, see [shapes.rs](https://github.com/algonents/wilhelm-rendere
 ![Shapes](images/shapes.png)
 
 Additional examples:
-
-- `bouncing_balls.rs` – a simple animation example
-
 - `bouncing_balls_instanced.rs` – demonstrates instanced rendering with 10,000 animated balls
   *(use `cargo run` inside the `examples/bouncing_balls` folder)*
 
