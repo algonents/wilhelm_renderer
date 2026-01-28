@@ -1,6 +1,6 @@
 extern crate wilhelm_renderer;
 
-use wilhelm_renderer::core::{App, Color, Vec2, Window};
+use wilhelm_renderer::core::{App, Color, Renderable, Vec2, Window};
 use wilhelm_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
 
 const WIDTH: i32 = 1600;

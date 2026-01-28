@@ -1,5 +1,6 @@
+use crate::core::color::Color;
 use crate::core::engine::glfw::glfw_get_time;
-use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_1f, gl_uniform_3f, gl_uniform_4f, gl_vertex_attrib_4f, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
+use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_func, gl_draw_arrays_instanced, gl_enable, gl_get_integerv, gl_uniform_1f, gl_uniform_3f, gl_uniform_4f, gl_vertex_attrib_4f, Vec2, GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_TEXTURE0, GL_TEXTURE_2D, GL_VIEWPORT};
 use crate::core::mesh::Mesh;
 use std::ffi::c_void;
 use crate::core::engine::opengl::{
@@ -14,6 +15,17 @@ pub struct Renderer {
 
 pub trait Renderable {
     fn render(&mut self, renderer: &Renderer);
+
+    fn set_position(&mut self, x: f32, y: f32);
+    fn position(&self) -> (f32, f32);
+    fn set_scale(&mut self, scale: f32);
+    fn scale(&self) -> f32;
+
+    // Instancing — default no-ops for renderables that don't support instancing
+    fn create_multiple_instances(&mut self, _capacity: usize) {}
+    fn set_instance_positions(&mut self, _positions: &[Vec2]) {}
+    fn set_instance_colors(&mut self, _colors: &[Color]) {}
+    fn clear_instances(&mut self) {}
 }
 
 impl Renderer {

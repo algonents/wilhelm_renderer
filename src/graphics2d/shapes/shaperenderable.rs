@@ -191,6 +191,39 @@ impl Renderable for ShapeRenderable {
             renderer.draw_mesh(&self.mesh);
         }
     }
+
+    fn set_position(&mut self, x: f32, y: f32) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn position(&self) -> (f32, f32) {
+        (self.x, self.y)
+    }
+
+    fn set_scale(&mut self, scale: f32) {
+        self.scale = scale;
+    }
+
+    fn scale(&self) -> f32 {
+        self.scale
+    }
+
+    fn create_multiple_instances(&mut self, capacity: usize) {
+        self.mesh.geometry.enable_instancing_xy(capacity);
+    }
+
+    fn set_instance_positions(&mut self, positions: &[Vec2]) {
+        self.mesh.geometry.update_instance_xy(positions);
+    }
+
+    fn set_instance_colors(&mut self, colors: &[Color]) {
+        self.mesh.geometry.update_instance_colors(colors);
+    }
+
+    fn clear_instances(&mut self) {
+        self.mesh.geometry.clear_instancing();
+    }
 }
 
 impl ShapeRenderable {
@@ -198,18 +231,6 @@ impl ShapeRenderable {
         Self { x, y, scale: 1.0, mesh, shape }
     }
 
-    pub fn set_position(&mut self, x: f32, y: f32) {
-        self.x = x;
-        self.y = y;
-    }
-
-    pub fn set_scale(&mut self, scale: f32) {
-        self.scale = scale;
-    }
-
-    pub fn scale(&self) -> f32 {
-        self.scale
-    }
     pub fn from_shape(x: f32, y: f32, shape: ShapeKind, style: ShapeStyle) -> Self {
         match shape {
             ShapeKind::Point => {
@@ -270,22 +291,6 @@ impl ShapeRenderable {
                 ShapeRenderable::text(x, y, text, style.fill.unwrap_or(Color::white()))
             }
         }
-    }
-
-    pub fn create_multiple_instances(&mut self, capacity: usize) {
-        self.mesh.geometry.enable_instancing_xy(capacity);
-    }
-
-    pub fn set_instance_positions(&mut self, positions: &[Vec2]) {
-        self.mesh.geometry.update_instance_xy(positions);
-    }
-
-    pub fn set_instance_colors(&mut self, colors: &[Color]) {
-        self.mesh.geometry.update_instance_colors(colors);
-    }
-
-    pub fn clear_instances(&mut self) {
-        self.mesh.geometry.clear_instancing();
     }
 
     fn point(x: GLfloat, y: GLfloat, color: Color) -> Self {

@@ -2,7 +2,8 @@
 //!
 //! Each waypoint is defined in WGS84 (longitude, latitude) and projected
 //! to screen coordinates via Mercator + Camera2D. Waypoints are rendered
-//! as small triangles with labels using ShapeRenderable.
+//! as small triangles with labels using a custom `Waypoint` struct that
+//! implements the `Renderable` trait.
 //!
 //! - Scroll wheel: zoom in/out (zooms toward cursor)
 
@@ -10,7 +11,7 @@ extern crate wilhelm_renderer;
 
 use std::cell::Cell;
 use wilhelm_renderer::core::{
-    App, Camera2D, Color, Projection, Vec2, Window,
+    App, Camera2D, Color, Projection, Renderable, Renderer, Vec2, Window,
     wgs84_to_mercator,
 };
 use wilhelm_renderer::graphics2d::shapes::{ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
@@ -23,6 +24,54 @@ thread_local! {
 
 const FONT_PATH: &str = "fonts/DejaVuSans.ttf";
 const FONT_SIZE: u32 = 11;
+const LABEL_OFFSET_X: f32 = 8.0;
+const LABEL_OFFSET_Y: f32 = -(FONT_SIZE as f32) / 2.0;
+
+struct Waypoint {
+    marker: ShapeRenderable,
+    label: ShapeRenderable,
+}
+
+impl Waypoint {
+    fn new(name: &str, color: Color, triangle: &Triangle) -> Self {
+        let marker = ShapeRenderable::from_shape(
+            0.0, 0.0,
+            ShapeKind::Triangle(triangle.clone()),
+            ShapeStyle::fill(color),
+        );
+        let label = ShapeRenderable::from_shape(
+            0.0, 0.0,
+            ShapeKind::Text(Text::new(name, FONT_PATH, FONT_SIZE)),
+            ShapeStyle::fill(color),
+        );
+        Self { marker, label }
+    }
+}
+
+impl Renderable for Waypoint {
+    fn render(&mut self, renderer: &Renderer) {
+        self.marker.render(renderer);
+        self.label.render(renderer);
+    }
+
+    fn set_position(&mut self, x: f32, y: f32) {
+        self.marker.set_position(x, y);
+        self.label.set_position(x + LABEL_OFFSET_X, y + LABEL_OFFSET_Y);
+    }
+
+    fn position(&self) -> (f32, f32) {
+        self.marker.position()
+    }
+
+    fn set_scale(&mut self, scale: f32) {
+        self.marker.set_scale(scale);
+        self.label.set_scale(scale);
+    }
+
+    fn scale(&self) -> f32 {
+        self.marker.scale()
+    }
+}
 
 fn main() {
     let waypoint_data: &[(f32, f32, &str)] = &[
@@ -90,24 +139,12 @@ fn main() {
 
     let mut app = App::new(window);
 
-    // Build shapes: [marker0, label0, marker1, label1, ...] -- 2 per waypoint
     let color = Color::from_rgb(0.2, 0.6, 1.0);
     let triangle = Triangle::new([(-4.0, 3.0), (4.0, 3.0), (0.0, -5.0)]);
 
-    let mut shapes = Vec::with_capacity(waypoint_data.len() * 2);
     for (_lon, _lat, name) in waypoint_data {
-        shapes.push(ShapeRenderable::from_shape(
-            0.0, 0.0,
-            ShapeKind::Triangle(triangle.clone()),
-            ShapeStyle::fill(color),
-        ));
-        shapes.push(ShapeRenderable::from_shape(
-            0.0, 0.0,
-            ShapeKind::Text(Text::new(*name, FONT_PATH, FONT_SIZE)),
-            ShapeStyle::fill(color),
-        ));
+        app.add_shape(Waypoint::new(name, color, &triangle));
     }
-    app.add_shapes(shapes);
 
     app.on_pre_render(move |shapes, _renderer| {
         let center = CAMERA_CENTER.with(|c| c.get());
@@ -121,13 +158,7 @@ fn main() {
 
         for (i, mercator) in mercator_positions.iter().enumerate() {
             let screen_pos = camera.world_to_screen(*mercator);
-            // marker at index 2*i
-            shapes[2 * i].set_position(screen_pos.x, screen_pos.y);
-            // label at index 2*i + 1
-            shapes[2 * i + 1].set_position(
-                screen_pos.x + 8.0,
-                screen_pos.y - (FONT_SIZE as f32) / 2.0,
-            );
+            shapes[i].set_position(screen_pos.x, screen_pos.y);
         }
     });
 
