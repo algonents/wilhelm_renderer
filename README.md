@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/logo.png" alt="Wilhelm Renderer" width="520">
+  <img src="https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/logo.png" alt="Wilhelm Renderer">
 </p>
 
 wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
