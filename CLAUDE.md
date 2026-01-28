@@ -96,6 +96,18 @@ No architectural blockers exist. The path from current state to high-performance
 - macOS: Links Cocoa, CoreFoundation, IOKit, CoreVideo frameworks
 - Windows: Links opengl32, gdi32, user32, shell32
 
+### Bundled Dependencies
+
+**FreeType 2.13.2** (text rendering):
+- Minimal build: Only TrueType/OpenType support with gzip for WOFF web fonts
+- Removed modules: bdf, bzip2, cache, cid, dlg, gxvalid, lzw, otvalid, pcf, pfr, sdf, svg, tools, type1, type42, winfonts
+- Removed: docs, tests, build system files, VS/Mac project files
+- Config files modified: `CMakeLists.txt` (source list), `include/freetype/config/ftmodule.h` (module registration)
+- This reduces crates.io package size from 3.2MB to 2.9MB compressed
+
+**GLFW 3.4** (window management):
+- Bundled in full, built via CMake
+
 ## Key Files
 
 - `src/lib.rs`: Library root, exports `core` and `graphics2d` modules
