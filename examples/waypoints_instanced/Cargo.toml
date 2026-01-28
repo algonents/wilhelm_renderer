@@ -1,0 +1,7 @@
+[package]
+name = "waypoints_instanced"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wilhelm_renderer = { path = "../.." }
