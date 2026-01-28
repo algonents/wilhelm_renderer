@@ -32,10 +32,26 @@ Technical debt and improvement areas identified in code review.
 
 ## Performance
 
+### Cost Profile (at N shapes per frame)
+
+| Operation | Calls | Location |
+|-----------|-------|----------|
+| Shader switches | N | `renderer.rs:39` |
+| VAO binds | N | `renderer.rs:40` |
+| Uniform lookups | 5N | `renderer.rs:49,59,65,70,78` |
+| Uniform sets | 5N | `renderer.rs:51,62,67,73,81` |
+| Blend state setup | N (redundant) | `renderer.rs:42-43` |
+| Vertex attrib reset | N (redundant) | `renderer.rs:47` |
+| Projection matrix compute | N (identical) | `shaperenderable.rs:181` |
+| Draw calls | N | `renderer.rs:90` |
+
+At 1,000 shapes: ~13,000 OpenGL state changes per frame.
+
 ### Per-Frame Overhead (High Priority)
 
-- [ ] `renderer.rs:48,58,64,94,102,107` - Cache uniform locations after shader compilation instead of looking up by string every draw call
-- [ ] `renderer.rs:45-46,91-92` - Set `gl_enable(GL_BLEND)` and `gl_blend_func` once at init, not every draw call
+- [ ] `renderer.rs:49,59,65,70,78` - Cache uniform locations after shader compilation instead of looking up by string every draw call. Currently 5 string lookups per shape per frame.
+- [ ] `renderer.rs:42-43` - Set `gl_enable(GL_BLEND)` and `gl_blend_func` once at init, not every draw call
+- [ ] `renderer.rs:47` - `gl_vertex_attrib_4f(2, 0.0, 0.0, 0.0, 0.0)` called per draw call to reset instance color attribute. Should be set once before the render loop.
 - [ ] `shaperenderable.rs:86` - Use cached window size from `InnerWindow` instead of calling `gl_get_integerv` every frame
 - [x] `renderer.rs:43,81` - Remove unnecessary VAO unbind between consecutive draws
 
@@ -43,6 +59,9 @@ Technical debt and improvement areas identified in code review.
 
 - [ ] Implement draw call batching for rendering many shapes of the same type
 - [ ] Sort draws by shader to minimize shader switches
+- [ ] No frustum culling — off-screen shapes go through the full draw pipeline (shader switch, VAO bind, uniform sets, draw call). Add viewport bounds check before issuing draw calls.
+- [ ] Geometry duplication — identical shapes (e.g., two circles with the same radius) create separate VAOs/VBOs with identical vertex data. Add a geometry cache keyed by shape type + parameters to share VAOs across identical shapes.
+- [ ] Instancing infrastructure exists (`Geometry::enable_instancing_xy`) but is not integrated into default shape creation. `from_shape()` always creates single-instance shapes. Users must manually call `create_multiple_instances()`. Consider automatic batching of identical shapes via instancing.
 - [ ] `shaperenderable.rs:283,290` - Scale circle/ellipse segment count based on radius/screen size (currently hardcoded 100/64)
 - [ ] `shaperenderable.rs:181` - `ortho_2d()` recomputes the same orthographic matrix for every shape every frame. Cache and reuse when window size hasn't changed.
 - [ ] `shaperenderable.rs:182-183` - `set_transform` and `set_scale` called per shape per frame with identical values. Could be set once per frame.
