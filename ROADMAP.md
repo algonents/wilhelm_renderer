@@ -82,18 +82,51 @@ Features to add to the wilhelm-renderer library to support interactive 2D visual
 The current architecture uses 1 draw call per shape, which becomes a CPU bottleneck at high entity counts. For 10,000+ shapes, architectural changes are needed.
 
 ### Instancing Enhancements (High Priority)
-- [ ] Per-instance rotation attribute (for oriented symbols)
-- [ ] Per-instance color attribute (vec4)
+- [x] Per-instance position attribute (vec2)
+- [x] Per-instance color attribute (vec4)
 - [x] Per-shape scale via `u_scale` uniform (shared across instances)
-- [ ] Per-instance scale attribute (for varying sizes within batch)
-- [ ] Generic `InstancedShape` API supporting position + rotation + color + scale
+- Remaining items covered in Draw Call Batching → Strategy A below
 
 ### Draw Call Batching
-- [ ] Implement `BatchRenderer` component for collecting and rendering shapes with minimal draw calls
-- [ ] Batch static geometry (coastlines, airways, sectors) into single VBOs
-- [ ] Group shapes by shader, issue one draw call per group
-- [ ] Separate batches for static vs dynamic geometry
-- [ ] `BatchRenderer` coexists with `ShapeRenderable` - opt-in for performance-critical paths
+
+Two complementary strategies, both additive to the existing per-shape path:
+
+**Strategy A: Extended instancing (identical shapes)**
+
+For N shapes with the same geometry (e.g., 1,000 circles), one VAO/VBO with per-instance attributes. Already works for position and color. Extend with:
+
+- [ ] Per-instance scale attribute
+- [ ] Per-instance rotation attribute
+- [ ] Generic `InstancedShape` API supporting position + rotation + color + scale
+
+**Strategy B: Dynamic geometry batching (mixed shapes per shader)**
+
+For heterogeneous shapes sharing a shader, merge pre-transformed vertices into a single VBO per shader type. Reduces N draw calls to ~4 (one per shader: default, point, text, image).
+
+- [ ] Add per-vertex color attribute to shape shader (currently color is a uniform — one draw call = one color)
+- [ ] Convert TRIANGLE_FAN/STRIP shapes to plain TRIANGLES for merging (drawing modes differ per shape type)
+- [ ] Retain CPU-side vertex data in `Geometry` or expose geometry-building functions (currently `add_buffer()` uploads to GPU and discards the data)
+- [ ] Implement `BatchRenderer` that collects shapes per shader, merges transformed vertices, issues one draw call per shader
+- [ ] Separate batches for static vs dynamic geometry (static: upload once; dynamic: rebuild per frame)
+
+**Architecture:**
+
+```
+BatchRenderer
+  └─ batches: HashMap<ShaderType, Batch>
+       └─ Batch
+            ├─ shader: Rc<Shader>
+            ├─ geometry: Geometry (single merged VBO)
+            └─ vertices: Vec<f32> (CPU-side, rebuilt when dirty)
+```
+
+**Implementation order:**
+
+1. Per-vertex color in the shader (prerequisite for both strategies)
+2. `BatchRenderer` for same-shader shapes (the big win: N draw calls → ~4)
+3. Auto-grouping: sort shapes by shader, batch automatically
+
+`BatchRenderer` coexists with `ShapeRenderable` — opt-in for performance-critical paths. The existing per-shape rendering stays as-is for simple cases.
 
 ### Render State Optimization
 - [ ] Cache uniform locations after shader compilation (from TODO.md)
