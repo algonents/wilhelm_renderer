@@ -109,6 +109,11 @@ impl Window {
         glfw_get_window_content_scale(self.glfw_window)
     }
 
+    /// Returns the raw GLFW window pointer for FFI integration (e.g., ImGui).
+    pub fn glfw_window_ptr(&self) -> *const GLFWwindow {
+        self.glfw_window
+    }
+
     pub fn clear_color(&self) {
         gl_clear_color(self.inner.background_color.get().red_value(), self.inner.background_color.get().green_value(), self.inner.background_color.get().blue_value(), 1.0);
     }

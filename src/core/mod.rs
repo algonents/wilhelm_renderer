@@ -25,3 +25,4 @@ pub use self::color::Color;
 pub use texture::generate_texture_from_image;
 pub use image::load_image;
 pub use self::projection::{Projection, IdentityProjection, Camera2D, wgs84_to_mercator, mercator_to_wgs84};
+pub use self::engine::glfw::GLFWwindow;
