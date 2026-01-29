@@ -5,6 +5,7 @@ use std::os::raw::c_double;
 use std::os::raw::c_int;
 
 pub const GLFW_SAMPLES: i32 = 0x0002100D;
+pub const GLFW_SCALE_TO_MONITOR: i32 = 0x0002200C;
 
 pub const GLFW_PLATFORM_WIN32: i32 = 0x00060001;
 pub const GLFW_PLATFORM_COCOA: i32 = 0x00060002;

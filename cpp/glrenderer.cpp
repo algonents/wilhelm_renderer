@@ -19,6 +19,9 @@ extern "C"
         // Set MSAA samples for antialiasing
         glfwWindowHint(GLFW_SAMPLES, 4);
 
+        // Enable DPI scaling on Windows - window resizes based on monitor content scale
+        glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+
         // Tell GLFW what version of OpenGL we are using
         // In this case we are using OpenGL 3.3 to be compatible with Mac
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
