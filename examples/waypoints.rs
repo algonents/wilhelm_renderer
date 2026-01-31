@@ -14,8 +14,7 @@ extern crate wilhelm_renderer;
 
 use std::cell::Cell;
 use wilhelm_renderer::core::{
-    App, Camera2D, Color, Projection, Renderable, Vec2, Window,
-    wgs84_to_mercator,
+    App, Camera2D, Color, Projection, Renderable, Vec2, Window
 };
 use wilhelm_renderer::graphics2d::shapes::{ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
 
@@ -29,6 +28,26 @@ const FONT_PATH: &str = "fonts/DejaVuSans.ttf";
 const FONT_SIZE: u32 = 11;
 const LABEL_OFFSET_X: f32 = 8.0;
 const LABEL_OFFSET_Y: f32 = -(FONT_SIZE as f32) / 2.0;
+const EARTH_RADIUS: f64 = 6_378_137.0;
+
+/// Convert WGS84 coordinates to Web Mercator projection (meters).
+///
+/// Input: `Vec2` where `x` = longitude in degrees, `y` = latitude in degrees.
+/// Output: `Vec2` where `x`, `y` are in meters. Y increases northward.
+///
+/// Uses f64 intermediate precision to avoid loss at large Mercator values.
+pub fn wgs84_to_mercator(coords: Vec2) -> Vec2 {
+    let lon_rad = (coords.x as f64).to_radians();
+    let lat_rad = (coords.y as f64).to_radians();
+
+    let x = lon_rad * EARTH_RADIUS;
+    let y = (std::f64::consts::FRAC_PI_4 + lat_rad / 2.0).tan().ln() * EARTH_RADIUS;
+
+    Vec2 {
+        x: x as f32,
+        y: y as f32,
+    }
+}
 
 struct Waypoint {
     mercator: Vec2,

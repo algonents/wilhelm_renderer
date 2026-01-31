@@ -175,41 +175,7 @@ impl Projection for Camera2D {
     }
 }
 
-const EARTH_RADIUS: f64 = 6_378_137.0;
 
-/// Convert WGS84 coordinates to Web Mercator projection (meters).
-///
-/// Input: `Vec2` where `x` = longitude in degrees, `y` = latitude in degrees.
-/// Output: `Vec2` where `x`, `y` are in meters. Y increases northward.
-///
-/// Uses f64 intermediate precision to avoid loss at large Mercator values.
-pub fn wgs84_to_mercator(coords: Vec2) -> Vec2 {
-    let lon_rad = (coords.x as f64).to_radians();
-    let lat_rad = (coords.y as f64).to_radians();
-
-    let x = lon_rad * EARTH_RADIUS;
-    let y = (std::f64::consts::FRAC_PI_4 + lat_rad / 2.0).tan().ln() * EARTH_RADIUS;
-
-    Vec2 {
-        x: x as f32,
-        y: y as f32,
-    }
-}
-
-/// Convert Web Mercator coordinates (meters) back to WGS84 (degrees).
-///
-/// Input: `Vec2` where `x`, `y` are in meters.
-/// Output: `Vec2` where `x` = longitude in degrees, `y` = latitude in degrees.
-pub fn mercator_to_wgs84(coords: Vec2) -> Vec2 {
-    let lon_rad = coords.x as f64 / EARTH_RADIUS;
-    let lat_rad = 2.0 * (coords.y as f64 / EARTH_RADIUS).exp().atan()
-        - std::f64::consts::FRAC_PI_2;
-
-    Vec2 {
-        x: lon_rad.to_degrees() as f32,
-        y: lat_rad.to_degrees() as f32,
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -332,35 +298,5 @@ mod tests {
 
         assert!((corner_world_before.x - corner_world_after.x).abs() < 0.001);
         assert!((corner_world_before.y - corner_world_after.y).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_mercator_roundtrip() {
-        // Bern, Switzerland
-        let wgs84 = Vec2::new(7.4474, 46.9480);
-        let mercator = wgs84_to_mercator(wgs84);
-        let back = mercator_to_wgs84(mercator);
-
-        assert!((back.x - wgs84.x).abs() < 0.001);
-        assert!((back.y - wgs84.y).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_mercator_equator_origin() {
-        let origin = wgs84_to_mercator(Vec2::new(0.0, 0.0));
-        assert!((origin.x).abs() < 0.1);
-        assert!((origin.y).abs() < 0.1);
-    }
-
-    #[test]
-    fn test_mercator_ordering() {
-        // East of prime meridian → positive x
-        let zurich = wgs84_to_mercator(Vec2::new(8.5417, 47.3769));
-        let geneva = wgs84_to_mercator(Vec2::new(6.1432, 46.2044));
-
-        // Zurich is east of Geneva → larger x
-        assert!(zurich.x > geneva.x);
-        // Zurich is north of Geneva → larger y
-        assert!(zurich.y > geneva.y);
     }
 }
