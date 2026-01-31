@@ -12,6 +12,7 @@ pub struct Mesh {
     transform: Mat4,
     screen_offset: Option<(f32, f32)>,
     scale: f32,
+    rotation: f32,
     pub color: Option<Color>,
     pub texture: Option<GLuint>,
 }
@@ -25,6 +26,7 @@ impl Mesh {
             transform: Mat4::IDENTITY,
             screen_offset: None,
             scale: 1.0,
+            rotation: 0.0,
             color: None,
             texture: None
         }
@@ -37,6 +39,7 @@ impl Mesh {
             transform: Mat4::IDENTITY,
             screen_offset: None,
             scale: 1.0,
+            rotation: 0.0,
             color,
             texture: None
         }
@@ -49,6 +52,7 @@ impl Mesh {
             transform: Mat4::IDENTITY,
             screen_offset: None,
             scale: 1.0,
+            rotation: 0.0,
             color: None,
             texture
         }
@@ -80,5 +84,12 @@ impl Mesh {
     }
     pub fn scale(&self) -> f32 {
         self.scale
+    }
+
+    pub fn set_rotation(&mut self, angle: f32) {
+        self.rotation = angle;
+    }
+    pub fn rotation(&self) -> f32 {
+        self.rotation
     }
 }

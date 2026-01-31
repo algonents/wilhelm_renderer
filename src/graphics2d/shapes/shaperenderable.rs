@@ -172,6 +172,7 @@ pub struct ShapeRenderable {
     x: f32,
     y: f32,
     scale: f32,
+    rotation: f32,
     mesh: Mesh,
     shape: ShapeKind,
 }
@@ -181,6 +182,7 @@ impl Renderable for ShapeRenderable {
         let transform = ortho_2d(window_width as f32, window_height as f32);
         self.mesh.set_transform(transform);
         self.mesh.set_scale(self.scale);
+        self.mesh.set_rotation(self.rotation);
 
         if self.mesh.geometry.instance_count() > 0 {
             // instanced: u_offset = (0,0), positions come from attrib 1
@@ -195,7 +197,7 @@ impl Renderable for ShapeRenderable {
 
 impl ShapeRenderable {
     fn new(x: f32, y: f32, mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x, y, scale: 1.0, mesh, shape }
+        Self { x, y, scale: 1.0, rotation: 0.0, mesh, shape }
     }
 
     pub fn set_position(&mut self, x: f32, y: f32) {
@@ -209,6 +211,14 @@ impl ShapeRenderable {
 
     pub fn scale(&self) -> f32 {
         self.scale
+    }
+
+    pub fn set_rotation(&mut self, angle: f32) {
+        self.rotation = angle;
+    }
+
+    pub fn rotation(&self) -> f32 {
+        self.rotation
     }
     pub fn from_shape(x: f32, y: f32, shape: ShapeKind, style: ShapeStyle) -> Self {
         match shape {

@@ -67,6 +67,11 @@ impl Renderer {
             gl_uniform_1f(scale_loc, mesh.scale());
         }
 
+        let rotation_loc = gl_get_uniform_location(mesh.shader.program(), "u_rotation");
+        if rotation_loc != -1 {
+            gl_uniform_1f(rotation_loc, mesh.rotation());
+        }
+
         let color_loc = gl_get_uniform_location(mesh.shader.program(), "geometryColor");
         if color_loc != -1 {
             if let Some(color) = mesh.color.as_ref() {
@@ -121,6 +126,11 @@ impl Renderer {
         let scale_loc = gl_get_uniform_location(mesh.shader.program(), "u_scale");
         if scale_loc != -1 {
             gl_uniform_1f(scale_loc, mesh.scale());
+        }
+
+        let rotation_loc = gl_get_uniform_location(mesh.shader.program(), "u_rotation");
+        if rotation_loc != -1 {
+            gl_uniform_1f(rotation_loc, mesh.rotation());
         }
 
         let color_loc = gl_get_uniform_location(mesh.shader.program(), "geometryColor");
