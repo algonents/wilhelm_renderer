@@ -109,6 +109,22 @@ No architectural blockers exist. The path from current state to high-performance
 **GLFW 3.4** (window management):
 - Bundled in full, built via CMake
 
+## Design Decisions
+
+### No Scene Graph / Composite Shapes
+
+The library uses a flat rendering model rather than hierarchical scene graphs. Reasons:
+
+- **Composites work against batching**: If 500 aircraft each "contain" their shapes (symbol + vector + label), you either render per-aircraft (1500 draw calls) or extract shapes to batch anyway
+- **Grouping is a domain concept**: "These shapes belong to the same aircraft" is application knowledge, not rendering knowledge
+- **Transform propagation is trivial**: A client struct can compute child positions without library support
+
+Logical grouping belongs in client code (e.g., `AircraftTrack` in SkyTracker), not the rendering library. The library focuses on efficiently rendering flat collections of shapes, which enables batching by shape type.
+
+### Performance: Optimize on Demand
+
+Performance optimizations are driven by actual bottlenecks discovered in client code, not speculation. The simple per-shape API is preferred until profiling proves it insufficient. The escape hatch (`App::on_render()` with direct instancing) exists for power users who hit limits before library-level batching is added.
+
 ## Key Files
 
 - `src/lib.rs`: Library root, exports `core` and `graphics2d` modules
