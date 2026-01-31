@@ -29,6 +29,7 @@ Technical debt and improvement areas identified in code review.
 
 - [x] `app.rs:25` - Make clear color configurable (hardcoded to `0.07, 0.13, 0.17`)
 - [x] `shaperenderable.rs:11` - Make `SCALE_FACTOR` configurable (now per-shape `scale` field)
+- [ ] Rotation pivot points are hardcoded per shape type (Image/Circle/Ellipse rotate around center; Rectangle/Polygon rotate around corner/first vertex). Add configurable pivot via `ShapeRenderable` API (e.g., `set_pivot(Pivot::Center)` or `Pivot::TopLeft`). Implementation is geometry-only — shader always rotates around origin, pivot controls how vertices are generated.
 
 ## Performance
 

@@ -121,6 +121,28 @@ No architectural blockers exist. The path from current state to high-performance
 
 Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image
 
+## Rotations
+
+Shapes support per-shape rotation via `set_rotation(angle)` where angle is in radians. The rotation is applied in the vertex shader before scaling and translation (rotate → scale → translate).
+
+**Rotation pivot points by shape type:**
+
+| Shape | Geometry Origin | Rotation Pivot | Position Refers To |
+|-------|-----------------|----------------|-------------------|
+| Image | Centered | Center | Center |
+| Circle | Centered | Center | Center |
+| Ellipse | Centered | Center | Center |
+| Rectangle | (0,0) corner | Top-left | Top-left |
+| RoundedRectangle | (0,0) corner | Top-left | Top-left |
+| Triangle | User-defined | Depends on vertices | First vertex |
+| Polygon | Anchored to first vertex | First vertex | First vertex |
+| Polyline | Anchored to first vertex | First vertex | First vertex |
+| Line | Anchored to start point | Start point | Start point |
+
+**For center rotation with Rectangle/Polygon:** Use the low-level `Mesh` API with geometry vertices centered at origin, or define Triangle vertices centered at origin.
+
+**Transform order in shaders:** `rotate(u_rotation)` → `scale(u_scale)` → `translate(u_screen_offset + aInstanceXY)` → `project(u_Transform)`
+
 ## Platform Notes
 
 - Supports both Wayland and X11 on Linux (GLFW selects backend at runtime)

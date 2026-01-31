@@ -867,15 +867,18 @@ impl ShapeRenderable {
 
     pub fn image_geometry(width: f32, height: f32) -> Geometry {
         // Vertex format: [x, y, u, v]
+        // Geometry centered at origin for rotation around center
+        let hw = width / 2.0;
+        let hh = height / 2.0;
         let vertices: Vec<f32> = vec![
             // Triangle 1
-            0.0, 0.0, 0.0, 0.0, // bottom-left
-            width, 0.0, 1.0, 0.0, // bottom-right
-            width, height, 1.0, 1.0, // top-right
+            -hw, -hh, 0.0, 0.0, // bottom-left
+             hw, -hh, 1.0, 0.0, // bottom-right
+             hw,  hh, 1.0, 1.0, // top-right
             // Triangle 2
-            0.0, 0.0, 0.0, 0.0, // bottom-left
-            width, height, 1.0, 1.0, // top-right
-            0.0, height, 0.0, 1.0, // top-left
+            -hw, -hh, 0.0, 0.0, // bottom-left
+             hw,  hh, 1.0, 1.0, // top-right
+            -hw,  hh, 0.0, 1.0, // top-left
         ];
 
         let values_per_vertex = 4; // x, y, u, v
