@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::rc::Rc;
 
-const MIN_STROKE_WIDTH: f32 = 1.5;
+const MIN_STROKE_WIDTH: f32 = 1.0;
 
 #[derive(Clone, Debug)]
 pub struct ShapeStyle {
