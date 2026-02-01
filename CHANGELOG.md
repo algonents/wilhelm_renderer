@@ -1,6 +1,15 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] - 2026-02-02
+
+### Added
+
+- **Rectangle stroke support.** Rectangles now support three styles via `ShapeStyle`:
+  - `fill(color)`: filled only (existing)
+  - `stroke(color, width)`: outlined only
+  - `fill_and_stroke(fill, stroke, width)`: both fill and stroke
+- **`set_instance_stroke_colors()`** for per-instance stroke colors when using instanced rendering with fill+stroke shapes.
+- **Reduced `MIN_STROKE_WIDTH`** from 1.5 to 1.0, allowing 1-pixel thin lines.
 
 ### Changed
 
