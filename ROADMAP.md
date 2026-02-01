@@ -45,6 +45,23 @@ Features to add to the wilhelm-renderer library to support interactive 2D visual
 
 > **SkyTracker**: Stereographic projection, lat/lon viewport, nautical mile units
 
+## Phase 2.5: Shape Stroke Support
+
+Add stroke (outline) rendering to filled shapes. Currently, shapes are either filled or stroked (lines, polylines, arcs). Goal: support fill-only, stroke-only, and fill+stroke for applicable shapes.
+
+### Completed
+- [x] Rectangle: fill, stroke, fill+stroke (uses polyline geometry for stroke)
+- [x] Instancing support for fill+stroke (separate stroke colors via `set_instance_stroke_colors`)
+
+### Remaining
+- [ ] Circle: stroke and fill+stroke
+- [ ] Ellipse: stroke and fill+stroke
+- [ ] Polygon: stroke and fill+stroke
+- [ ] RoundedRectangle: stroke and fill+stroke
+- [ ] Triangle: stroke and fill+stroke
+
+> **Note**: Line, Polyline, and Arc are inherently stroke-based shapes.
+
 ## Phase 3: Interaction
 
 ### Picking/Selection

@@ -174,6 +174,7 @@ pub struct ShapeRenderable {
     scale: f32,
     rotation: f32,
     mesh: Mesh,
+    stroke_mesh: Option<Mesh>,
     shape: ShapeKind,
 }
 impl Renderable for ShapeRenderable {
@@ -192,12 +193,30 @@ impl Renderable for ShapeRenderable {
             self.mesh.set_screen_offset(self.x, self.y);
             renderer.draw_mesh(&self.mesh);
         }
+
+        // Render stroke on top if present
+        if let Some(stroke) = &mut self.stroke_mesh {
+            stroke.set_transform(transform);
+            stroke.set_scale(self.scale);
+            stroke.set_rotation(self.rotation);
+
+            if stroke.geometry.instance_count() > 0 {
+                renderer.draw_mesh_instanced(stroke);
+            } else {
+                stroke.set_screen_offset(self.x, self.y);
+                renderer.draw_mesh(stroke);
+            }
+        }
     }
 }
 
 impl ShapeRenderable {
     fn new(x: f32, y: f32, mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x, y, scale: 1.0, rotation: 0.0, mesh, shape }
+        Self { x, y, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: None, shape }
+    }
+
+    fn new_with_stroke(x: f32, y: f32, mesh: Mesh, stroke_mesh: Mesh, shape: ShapeKind) -> Self {
+        Self { x, y, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: Some(stroke_mesh), shape }
     }
 
     pub fn set_position(&mut self, x: f32, y: f32) {
@@ -250,18 +269,32 @@ impl ShapeRenderable {
             }
 
             ShapeKind::Rectangle(rect) => {
-                if style.fill.is_none() && style.stroke_color.is_some() {
-                    // Stroke-only: render as outline
-                    ShapeRenderable::rectangle_outline(
-                        x,
-                        y,
-                        rect,
-                        style.stroke_color.unwrap(),
-                        style.stroke_width.unwrap_or(1.0),
-                    )
-                } else {
-                    // Filled rectangle (default)
-                    ShapeRenderable::rectangle(x, y, rect, style.fill.unwrap_or(Color::white()))
+                match (style.fill, style.stroke_color) {
+                    (Some(fill), Some(stroke)) => {
+                        // Fill and stroke
+                        ShapeRenderable::rectangle_fill_and_stroke(
+                            x,
+                            y,
+                            rect,
+                            fill,
+                            stroke,
+                            style.stroke_width.unwrap_or(1.0),
+                        )
+                    }
+                    (None, Some(stroke)) => {
+                        // Stroke-only
+                        ShapeRenderable::rectangle_outline(
+                            x,
+                            y,
+                            rect,
+                            stroke,
+                            style.stroke_width.unwrap_or(1.0),
+                        )
+                    }
+                    (fill, None) => {
+                        // Fill-only (default)
+                        ShapeRenderable::rectangle(x, y, rect, fill.unwrap_or(Color::white()))
+                    }
                 }
             }
 
@@ -296,18 +329,33 @@ impl ShapeRenderable {
 
     pub fn create_multiple_instances(&mut self, capacity: usize) {
         self.mesh.geometry.enable_instancing_xy(capacity);
+        if let Some(stroke) = &mut self.stroke_mesh {
+            stroke.geometry.enable_instancing_xy(capacity);
+        }
     }
 
     pub fn set_instance_positions(&mut self, positions: &[Vec2]) {
         self.mesh.geometry.update_instance_xy(positions);
+        if let Some(stroke) = &mut self.stroke_mesh {
+            stroke.geometry.update_instance_xy(positions);
+        }
     }
 
     pub fn set_instance_colors(&mut self, colors: &[Color]) {
         self.mesh.geometry.update_instance_colors(colors);
     }
 
+    pub fn set_instance_stroke_colors(&mut self, colors: &[Color]) {
+        if let Some(stroke) = &mut self.stroke_mesh {
+            stroke.geometry.update_instance_colors(colors);
+        }
+    }
+
     pub fn clear_instances(&mut self) {
         self.mesh.geometry.clear_instancing();
+        if let Some(stroke) = &mut self.stroke_mesh {
+            stroke.geometry.clear_instancing();
+        }
     }
 
     fn point(x: GLfloat, y: GLfloat, color: Color) -> Self {
@@ -451,6 +499,33 @@ impl ShapeRenderable {
         let geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
         ShapeRenderable::new(x, y, mesh, ShapeKind::Rectangle(rect))
+    }
+
+    fn rectangle_fill_and_stroke(
+        x: f32,
+        y: f32,
+        rect: Rectangle,
+        fill: Color,
+        stroke: Color,
+        stroke_width: f32,
+    ) -> Self {
+        // Fill geometry
+        let fill_geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height);
+        let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
+
+        // Stroke geometry (closed polyline)
+        let points = vec![
+            (0.0, 0.0),
+            (rect.width, 0.0),
+            (rect.width, rect.height),
+            (0.0, rect.height),
+            (0.0, 0.0),
+            (rect.width, 0.0),
+        ];
+        let stroke_geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
+        let stroke_mesh = Mesh::with_color(default_shader(), stroke_geometry, Some(stroke));
+
+        ShapeRenderable::new_with_stroke(x, y, fill_mesh, stroke_mesh, ShapeKind::Rectangle(rect))
     }
 
     fn rounded_rectangle(x: f32, y: f32, rr: RoundedRectangle, color: Color) -> Self {
