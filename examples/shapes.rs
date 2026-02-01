@@ -142,6 +142,12 @@ fn main() {
             ShapeKind::Rectangle(Rectangle::new(100.0, 50.0)),
             ShapeStyle::fill(Color::from_rgb(0.0, 1.0, 0.0)),
         ),
+        // Outlined rectangle at (270, 50)
+        ShapeRenderable::from_shape(
+            270.0, 50.0,
+            ShapeKind::Rectangle(Rectangle::new(200.0, 80.0)),
+            ShapeStyle::stroke(Color::from_rgb(0.2, 0.5, 0.9), 3.0),
+        ),
         // Images
         ShapeRenderable::image_with_size(200.0, 540.0, "images/smiley.png", 40.0, 40.0),
         ShapeRenderable::image(400.0, 500.0, "images/bunny.png"),

@@ -250,7 +250,19 @@ impl ShapeRenderable {
             }
 
             ShapeKind::Rectangle(rect) => {
-                ShapeRenderable::rectangle(x, y, rect, style.fill.unwrap_or(Color::white()))
+                if style.fill.is_none() && style.stroke_color.is_some() {
+                    // Stroke-only: render as outline
+                    ShapeRenderable::rectangle_outline(
+                        x,
+                        y,
+                        rect,
+                        style.stroke_color.unwrap(),
+                        style.stroke_width.unwrap_or(1.0),
+                    )
+                } else {
+                    // Filled rectangle (default)
+                    ShapeRenderable::rectangle(x, y, rect, style.fill.unwrap_or(Color::white()))
+                }
             }
 
             ShapeKind::RoundedRectangle(rr) => {
@@ -414,6 +426,30 @@ impl ShapeRenderable {
     fn rectangle(x: f32, y: f32, rect: Rectangle, color: Color) -> Self {
         let geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
+        ShapeRenderable::new(x, y, mesh, ShapeKind::Rectangle(rect))
+    }
+
+    fn rectangle_outline(
+        x: f32,
+        y: f32,
+        rect: Rectangle,
+        stroke: Color,
+        stroke_width: f32,
+    ) -> Self {
+        // Create a closed polyline forming the rectangle border
+        // Points: top-left -> top-right -> bottom-right -> bottom-left -> back to top-left
+        // Extra point at end provides direction for proper miter join at closing corner
+        let points = vec![
+            (0.0, 0.0),
+            (rect.width, 0.0),
+            (rect.width, rect.height),
+            (0.0, rect.height),
+            (0.0, 0.0),        // close the loop
+            (rect.width, 0.0), // direction hint for join at closing corner
+        ];
+
+        let geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
         ShapeRenderable::new(x, y, mesh, ShapeKind::Rectangle(rect))
     }
 
