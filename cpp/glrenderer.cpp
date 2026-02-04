@@ -132,6 +132,11 @@ extern "C"
         glfwSetCursorPosCallback(window, callback);
     }
 
+    void _glfwSetKeyCallback(GLFWwindow *window, GLFWkeyfun callback)
+    {
+        glfwSetKeyCallback(window, callback);
+    }
+
     void _glfwGetWindowSize(GLFWwindow *window, int *width, int *height)
     {
         glfwGetWindowSize(window, width, height);

@@ -26,6 +26,7 @@ extern "C"
     void _glfwSetWindowSizeCallback(GLFWwindow *window, GLFWwindowsizefun callback);
     void _glfwSetScrollCallback(GLFWwindow *window, GLFWscrollfun callback);
     void _glfwSetCursorPosCallback(GLFWwindow *window, GLFWcursorposfun callback);
+    void _glfwSetKeyCallback(GLFWwindow *window, GLFWkeyfun callback);
 
     void _glfwGetWindowSize(GLFWwindow *window, int *width, int *height);
     void _glfwWindowHint(int hint, int value);

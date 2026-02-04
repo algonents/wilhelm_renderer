@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use std::rc::Rc;
 use crate::core::Color;
 use crate::core::engine::opengl::{gl_clear_color, gl_viewport};
-use crate::core::engine::glfw::{GLFWwindow, glfw_create_window, glfw_destroy_window, glfw_get_window_content_scale, glfw_get_window_user_pointer, glfw_poll_events, glfw_set_cursor_pos_callback, glfw_set_scroll_callback, glfw_set_window_size_callback, glfw_set_window_user_pointer, glfw_swap_buffers, glfw_window_should_close};
+use crate::core::engine::glfw::{GLFWwindow, glfw_create_window, glfw_destroy_window, glfw_get_window_content_scale, glfw_get_window_user_pointer, glfw_poll_events, glfw_set_cursor_pos_callback, glfw_set_key_callback, glfw_set_scroll_callback, glfw_set_window_size_callback, glfw_set_window_user_pointer, glfw_swap_buffers, glfw_window_should_close};
 
 
 /// Shared inner state that both Window and WindowHandle can access.
@@ -19,6 +19,7 @@ pub struct Window {
     on_resize: Option<Box<dyn FnMut(i32, i32)>>,
     on_scroll: Option<Box<dyn FnMut(f64, f64)>>,
     on_cursor_position: Option<Box<dyn FnMut(f64, f64)>>,
+    on_key: Option<Box<dyn FnMut(i32, i32, i32, i32)>>,
 }
 
 /// Cheap, cloneable handle to query window state without owning the window.
@@ -63,6 +64,22 @@ extern "C" fn _on_cursor_position_callback(_window: *const GLFWwindow, x_pos: f6
     }
 }
 
+extern "C" fn _on_key_callback(
+    _window: *const GLFWwindow,
+    key: i32,
+    scancode: i32,
+    action: i32,
+    mods: i32,
+) {
+    let user_ptr = glfw_get_window_user_pointer(_window);
+    if !user_ptr.is_null() {
+        unsafe {
+            let window_ref: &mut Window = &mut *(user_ptr as *mut Window);
+            window_ref._on_key(key, scancode, action, mods);
+        }
+    }
+}
+
 impl Window {
     pub fn new(title: &str, width: i32, height: i32, background_color: Color) -> Box<Self> {
         let glfw_window = glfw_create_window(title, width, height, Some(_on_viewport_resized));
@@ -70,7 +87,7 @@ impl Window {
         glfw_set_window_size_callback(glfw_window, Some(_on_window_resized_callback));
         glfw_set_scroll_callback(glfw_window, Some(_on_scroll_callback));
         glfw_set_cursor_pos_callback(glfw_window, Some(_on_cursor_position_callback));
-
+        glfw_set_key_callback(glfw_window, Some(_on_key_callback));
 
         let inner = Rc::new(InnerWindow {
             width: Cell::new(width),
@@ -84,6 +101,7 @@ impl Window {
             on_resize: None,
             on_scroll: None,
             on_cursor_position: None,
+            on_key: None,
         });
         glfw_set_window_user_pointer(glfw_window, &mut *window as *mut _ as *mut c_void);
         gl_clear_color(background_color.red_value(), background_color.green_value(), background_color.blue_value(), 1.0);
@@ -148,6 +166,13 @@ impl Window {
         self.on_cursor_position = Some(Box::new(f));
     }
 
+    pub fn on_key<F>(&mut self, f: F)
+    where
+        F: FnMut(i32, i32, i32, i32) + 'static,
+    {
+        self.on_key = Some(Box::new(f));
+    }
+
     fn _on_resize(&mut self, width: i32, height: i32) {
         if let Some(callback) = &mut self.on_resize {
             callback(width, height);
@@ -162,6 +187,12 @@ impl Window {
     fn _on_cursor_position(&mut self, x_pos: f64, y_pos: f64) {
         if let Some(callback) = &mut self.on_cursor_position {
             callback(x_pos, y_pos);
+        }
+    }
+
+    fn _on_key(&mut self, key: i32, scancode: i32, action: i32, mods: i32) {
+        if let Some(callback) = &mut self.on_key {
+            callback(key, scancode, action, mods);
         }
     }
 }
