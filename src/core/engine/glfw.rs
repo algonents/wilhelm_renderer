@@ -30,6 +30,15 @@ pub type GLFWkeyfun = Option<
     extern "C" fn(window: *const GLFWwindow, key: i32, scancode: i32, action: i32, mods: i32),
 >;
 
+pub type GLFWmousebuttonfun = Option<
+    extern "C" fn(window: *const GLFWwindow, button: i32, action: i32, mods: i32),
+>;
+
+// Mouse buttons
+pub const GLFW_MOUSE_BUTTON_LEFT: i32 = 0;
+pub const GLFW_MOUSE_BUTTON_RIGHT: i32 = 1;
+pub const GLFW_MOUSE_BUTTON_MIDDLE: i32 = 2;
+
 // Key actions
 pub const GLFW_RELEASE: i32 = 0;
 pub const GLFW_PRESS: i32 = 1;
@@ -108,6 +117,7 @@ unsafe extern "C" {
     fn _glfwSetScrollCallback(window: *const GLFWwindow, callback: GLFWscrollfun);
     fn _glfwSetCursorPosCallback(window: *const GLFWwindow, callback: GLFWcursorposfun);
     fn _glfwSetKeyCallback(window: *const GLFWwindow, callback: GLFWkeyfun);
+    fn _glfwSetMouseButtonCallback(window: *const GLFWwindow, callback: GLFWmousebuttonfun);
     fn _glfwGetWindowSize(window: *const GLFWwindow, width: *mut c_int, height: *mut c_int);
 
     fn _glfwGetPlatform() -> c_int;
@@ -179,6 +189,12 @@ pub fn glfw_set_cursor_pos_callback(window: *const GLFWwindow, callback: GLFWcur
 pub fn glfw_set_key_callback(window: *const GLFWwindow, callback: GLFWkeyfun) {
     unsafe {
         _glfwSetKeyCallback(window, callback);
+    }
+}
+
+pub fn glfw_set_mouse_button_callback(window: *const GLFWwindow, callback: GLFWmousebuttonfun) {
+    unsafe {
+        _glfwSetMouseButtonCallback(window, callback);
     }
 }
 

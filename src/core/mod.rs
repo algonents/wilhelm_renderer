@@ -24,5 +24,7 @@ pub use self::app::App;
 pub use self::color::Color;
 pub use texture::generate_texture_from_image;
 pub use image::load_image;
-pub use self::camera::{Projection, IdentityProjection, Camera2D};
+pub use self::camera::{Projection, IdentityProjection, Camera2D, CameraController};
 pub use self::engine::glfw::GLFWwindow;
+pub use self::engine::glfw::{GLFW_MOUSE_BUTTON_LEFT, GLFW_MOUSE_BUTTON_RIGHT, GLFW_MOUSE_BUTTON_MIDDLE};
+pub use self::engine::glfw::{GLFW_PRESS, GLFW_RELEASE};

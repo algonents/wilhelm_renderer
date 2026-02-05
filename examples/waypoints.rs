@@ -9,20 +9,16 @@
 //! the label offset logic encapsulated in the Waypoint struct.
 //!
 //! - Scroll wheel: zoom in/out (zooms toward cursor)
+//! - Left mouse button drag: pan the view
 
 extern crate wilhelm_renderer;
 
-use std::cell::Cell;
+use std::cell::RefCell;
+use std::rc::Rc;
 use wilhelm_renderer::core::{
-    App, Camera2D, Color, Projection, Renderable, Vec2, Window
+    App, Camera2D, CameraController, Color, Projection, Renderable, Vec2, Window
 };
 use wilhelm_renderer::graphics2d::shapes::{ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
-
-thread_local! {
-    static CAMERA_CENTER: Cell<(f32, f32)> = Cell::new((0.0, 0.0));
-    static CAMERA_SCALE: Cell<f32> = Cell::new(1.0);
-    static MOUSE_POS: Cell<(f64, f64)> = Cell::new((0.0, 0.0));
-}
 
 const FONT_PATH: &str = "fonts/DejaVuSans.ttf";
 const FONT_SIZE: u32 = 11;
@@ -115,53 +111,47 @@ fn main() {
     let range_y = max_y - min_y;
     let initial_scale = (700.0 / range_x).min(500.0 / range_y);
 
-    CAMERA_CENTER.with(|c| c.set((center.x, center.y)));
-    CAMERA_SCALE.with(|s| s.set(initial_scale));
+    let camera = Camera2D::new(center, initial_scale, Vec2::new(800.0, 600.0));
+    let controller = Rc::new(RefCell::new(CameraController::new(camera)));
 
-    // Scroll to zoom at cursor
-    window.on_scroll(move |_, y_offset| {
-        let zoom_factor = if y_offset > 0.0 { 1.1 } else { 1.0 / 1.1 };
-        let mouse_pos = MOUSE_POS.with(|m| m.get());
-        let center = CAMERA_CENTER.with(|c| c.get());
-        let scale = CAMERA_SCALE.with(|s| s.get());
-
-        let mut camera = Camera2D::new(
-            Vec2::new(center.0, center.1),
-            scale,
-            Vec2::new(800.0, 600.0),
-        );
-        camera.zoom_at(zoom_factor, Vec2::new(mouse_pos.0 as f32, mouse_pos.1 as f32));
-
-        let new_scale = camera.scale().clamp(initial_scale * 0.01, initial_scale * 100.0);
-        camera.set_scale(new_scale);
-
-        CAMERA_CENTER.with(|c| c.set((camera.center().x, camera.center().y)));
-        CAMERA_SCALE.with(|s| s.set(camera.scale()));
+    // Connect controller to window callbacks
+    let ctrl = Rc::clone(&controller);
+    window.on_mouse_button(move |button, action, _mods| {
+        ctrl.borrow_mut().on_mouse_button(button, action);
     });
 
+    let ctrl = Rc::clone(&controller);
     window.on_cursor_position(move |x, y| {
-        MOUSE_POS.with(|m| m.set((x, y)));
+        ctrl.borrow_mut().on_cursor_move(x, y);
+    });
+
+    let ctrl = Rc::clone(&controller);
+    window.on_scroll(move |_, y_offset| {
+        ctrl.borrow_mut().on_scroll(y_offset);
+    });
+
+    let ctrl = Rc::clone(&controller);
+    window.on_resize(move |width, height| {
+        ctrl.borrow_mut()
+            .camera_mut()
+            .set_screen_size(Vec2::new(width as f32, height as f32));
     });
 
     let mut app = App::new(window);
 
+    let ctrl = Rc::clone(&controller);
     app.on_render(move |renderer| {
-        let center = CAMERA_CENTER.with(|c| c.get());
-        let scale = CAMERA_SCALE.with(|s| s.get());
-
-        let camera = Camera2D::new(
-            Vec2::new(center.0, center.1),
-            scale,
-            Vec2::new(800.0, 600.0),
-        );
+        let controller = ctrl.borrow();
+        let camera = controller.camera();
 
         for waypoint in &mut waypoints {
-            waypoint.update_and_render(&camera, renderer);
+            waypoint.update_and_render(camera, renderer);
         }
     });
 
     println!("Waypoints - WGS84 Projection");
     println!("  Scroll: zoom in/out (zooms toward cursor)");
+    println!("  Left mouse drag: pan the view");
     println!();
     println!("Waypoints: Geneva, Lausanne, Bern, Sarnen, Zurich, St-Moritz");
 

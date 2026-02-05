@@ -7,20 +7,16 @@
 //! Run from crate directory: `cd examples/waypoints_instanced && cargo run`
 //!
 //! - Scroll wheel: zoom in/out (zooms toward cursor)
+//! - Left mouse button drag: pan the view
 
 extern crate wilhelm_renderer;
 
-use std::cell::Cell;
+use std::cell::RefCell;
+use std::rc::Rc;
 use wilhelm_renderer::core::{
-    App, Camera2D, Color, Projection, Renderable, Vec2, Window
+    App, Camera2D, CameraController, Color, Projection, Renderable, Vec2, Window
 };
 use wilhelm_renderer::graphics2d::shapes::{ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
-
-thread_local! {
-    static CAMERA_CENTER: Cell<(f32, f32)> = Cell::new((0.0, 0.0));
-    static CAMERA_SCALE: Cell<f32> = Cell::new(1.0);
-    static MOUSE_POS: Cell<(f64, f64)> = Cell::new((0.0, 0.0));
-}
 
 const FONT_PATH: &str = "../../fonts/DejaVuSans.ttf";
 const FONT_SIZE: u32 = 11;
@@ -47,20 +43,6 @@ pub fn wgs84_to_mercator(coords: Vec2) -> Vec2 {
     }
 }
 
-/// Convert Web Mercator coordinates (meters) back to WGS84 (degrees).
-///
-/// Input: `Vec2` where `x`, `y` are in meters.
-/// Output: `Vec2` where `x` = longitude in degrees, `y` = latitude in degrees.
-pub fn mercator_to_wgs84(coords: Vec2) -> Vec2 {
-    let lon_rad = coords.x as f64 / EARTH_RADIUS;
-    let lat_rad = 2.0 * (coords.y as f64 / EARTH_RADIUS).exp().atan()
-        - std::f64::consts::FRAC_PI_2;
-
-    Vec2 {
-        x: lon_rad.to_degrees() as f32,
-        y: lat_rad.to_degrees() as f32,
-    }
-}
 fn main() {
     let waypoint_data: &[(f32, f32, &str)] = &[
         (6.1432, 46.2044, "Geneva"),
@@ -96,32 +78,30 @@ fn main() {
     let range_y = max_y - min_y;
     let initial_scale = (700.0 / range_x).min(500.0 / range_y);
 
-    CAMERA_CENTER.with(|c| c.set((center.x, center.y)));
-    CAMERA_SCALE.with(|s| s.set(initial_scale));
+    let camera = Camera2D::new(center, initial_scale, Vec2::new(800.0, 600.0));
+    let controller = Rc::new(RefCell::new(CameraController::new(camera)));
 
-    // Scroll to zoom at cursor
-    window.on_scroll(move |_, y_offset| {
-        let zoom_factor = if y_offset > 0.0 { 1.1 } else { 1.0 / 1.1 };
-        let mouse_pos = MOUSE_POS.with(|m| m.get());
-        let center = CAMERA_CENTER.with(|c| c.get());
-        let scale = CAMERA_SCALE.with(|s| s.get());
-
-        let mut camera = Camera2D::new(
-            Vec2::new(center.0, center.1),
-            scale,
-            Vec2::new(800.0, 600.0),
-        );
-        camera.zoom_at(zoom_factor, Vec2::new(mouse_pos.0 as f32, mouse_pos.1 as f32));
-
-        let new_scale = camera.scale().clamp(initial_scale * 0.01, initial_scale * 100.0);
-        camera.set_scale(new_scale);
-
-        CAMERA_CENTER.with(|c| c.set((camera.center().x, camera.center().y)));
-        CAMERA_SCALE.with(|s| s.set(camera.scale()));
+    // Connect controller to window callbacks
+    let ctrl = Rc::clone(&controller);
+    window.on_mouse_button(move |button, action, _mods| {
+        ctrl.borrow_mut().on_mouse_button(button, action);
     });
 
+    let ctrl = Rc::clone(&controller);
     window.on_cursor_position(move |x, y| {
-        MOUSE_POS.with(|m| m.set((x, y)));
+        ctrl.borrow_mut().on_cursor_move(x, y);
+    });
+
+    let ctrl = Rc::clone(&controller);
+    window.on_scroll(move |_, y_offset| {
+        ctrl.borrow_mut().on_scroll(y_offset);
+    });
+
+    let ctrl = Rc::clone(&controller);
+    window.on_resize(move |width, height| {
+        ctrl.borrow_mut()
+            .camera_mut()
+            .set_screen_size(Vec2::new(width as f32, height as f32));
     });
 
     let color = Color::from_rgb(0.2, 0.6, 1.0);
@@ -152,15 +132,10 @@ fn main() {
 
     let mut app = App::new(window);
 
+    let ctrl = Rc::clone(&controller);
     app.on_render(move |renderer| {
-        let center = CAMERA_CENTER.with(|c| c.get());
-        let scale = CAMERA_SCALE.with(|s| s.get());
-
-        let camera = Camera2D::new(
-            Vec2::new(center.0, center.1),
-            scale,
-            Vec2::new(800.0, 600.0),
-        );
+        let controller = ctrl.borrow();
+        let camera = controller.camera();
 
         // Project all waypoints to screen coordinates
         for (i, mercator) in mercator_positions.iter().enumerate() {
@@ -180,6 +155,7 @@ fn main() {
 
     println!("Waypoints — Instanced Markers");
     println!("  Scroll: zoom in/out (zooms toward cursor)");
+    println!("  Left mouse drag: pan the view");
     println!("  Markers: 1 instanced draw call for {} triangles", n);
     println!("  Labels:  {} individual draw calls", n);
     println!();

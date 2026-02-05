@@ -1,8 +1,10 @@
 //! 2D camera system for pan, zoom, and coordinate transformations.
 //!
 //! Provides [`Camera2D`] for managing the visible region of a 2D world,
+//! [`CameraController`] for handling input-driven pan and zoom,
 //! and the [`Projection`] trait for custom coordinate transformations.
 
+use crate::core::engine::glfw::{GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS};
 use crate::core::engine::opengl::Vec2;
 
 /// Trait for coordinate transformations between world and screen space.
@@ -175,7 +177,102 @@ impl Projection for Camera2D {
     }
 }
 
+/// Input-driven controller for [`Camera2D`] with drag-to-pan and scroll-to-zoom.
+///
+/// `CameraController` wraps a `Camera2D` and handles mouse/scroll input to provide
+/// standard camera controls. Connect it to window callbacks to enable:
+/// - **Drag-to-pan**: Hold left mouse button and drag to pan the view
+/// - **Scroll-to-zoom**: Mouse wheel zooms in/out, centered on cursor position
+///
+/// # Example
+///
+/// ```ignore
+/// use wilhelm_renderer::core::{Camera2D, CameraController, Vec2};
+///
+/// let camera = Camera2D::new(Vec2::new(0.0, 0.0), 1.0, Vec2::new(800.0, 600.0));
+/// let mut controller = CameraController::new(camera);
+///
+/// // Connect to window callbacks
+/// window.on_mouse_button(|button, action, _| {
+///     controller.on_mouse_button(button, action);
+/// });
+/// window.on_cursor_position(|x, y| {
+///     controller.on_cursor_move(x, y);
+/// });
+/// window.on_scroll(|_, y| {
+///     controller.on_scroll(y);
+/// });
+/// ```
+pub struct CameraController {
+    camera: Camera2D,
+    is_dragging: bool,
+    last_cursor_pos: Vec2,
+    zoom_sensitivity: f32,
+}
 
+impl CameraController {
+    /// Create a new controller wrapping the given camera.
+    pub fn new(camera: Camera2D) -> Self {
+        Self {
+            camera,
+            is_dragging: false,
+            last_cursor_pos: Vec2::new(0.0, 0.0),
+            zoom_sensitivity: 1.1,
+        }
+    }
+
+    /// Set zoom sensitivity. Default is 1.1 (10% zoom per scroll tick).
+    ///
+    /// Values > 1.0 control how much each scroll tick zooms.
+    /// For example, 1.2 means 20% zoom per tick.
+    pub fn set_zoom_sensitivity(&mut self, sensitivity: f32) {
+        self.zoom_sensitivity = sensitivity;
+    }
+
+    /// Handle mouse button events. Call this from `Window::on_mouse_button`.
+    pub fn on_mouse_button(&mut self, button: i32, action: i32) {
+        if button == GLFW_MOUSE_BUTTON_LEFT {
+            self.is_dragging = action == GLFW_PRESS;
+        }
+    }
+
+    /// Handle cursor movement. Call this from `Window::on_cursor_position`.
+    pub fn on_cursor_move(&mut self, x: f64, y: f64) {
+        let cursor = Vec2::new(x as f32, y as f32);
+
+        if self.is_dragging {
+            let delta = Vec2::new(
+                cursor.x - self.last_cursor_pos.x,
+                cursor.y - self.last_cursor_pos.y,
+            );
+            self.camera.pan_screen(delta);
+        }
+
+        self.last_cursor_pos = cursor;
+    }
+
+    /// Handle scroll events for zooming. Call this from `Window::on_scroll`.
+    ///
+    /// Zooms centered on the current cursor position.
+    pub fn on_scroll(&mut self, y_offset: f64) {
+        let factor = if y_offset > 0.0 {
+            self.zoom_sensitivity
+        } else {
+            1.0 / self.zoom_sensitivity
+        };
+        self.camera.zoom_at(factor, self.last_cursor_pos);
+    }
+
+    /// Get a reference to the underlying camera.
+    pub fn camera(&self) -> &Camera2D {
+        &self.camera
+    }
+
+    /// Get a mutable reference to the underlying camera.
+    pub fn camera_mut(&mut self) -> &mut Camera2D {
+        &mut self.camera
+    }
+}
 
 #[cfg(test)]
 mod tests {
