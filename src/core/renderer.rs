@@ -110,6 +110,10 @@ impl Renderer {
         gl_enable(GL_BLEND);
         gl_blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        // Reset instance color attribute to (0,0,0,0) so the shader falls back to
+        // the geometryColor uniform. OpenGL defaults disabled attributes to (0,0,0,1).
+        gl_vertex_attrib_4f(2, 0.0, 0.0, 0.0, 0.0);
+
         let transform_loc = gl_get_uniform_location(mesh.shader.program(), "u_Transform");
         if transform_loc != -1 {
             gl_uniform_matrix_4fv(
