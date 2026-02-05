@@ -182,7 +182,7 @@ impl Projection for Camera2D {
 /// `CameraController` wraps a `Camera2D` and handles mouse/scroll input to provide
 /// standard camera controls. Connect it to window callbacks to enable:
 /// - **Drag-to-pan**: Hold left mouse button and drag to pan the view
-/// - **Scroll-to-zoom**: Mouse wheel zooms in/out, centered on cursor position
+/// - **Scroll-to-zoom**: Mouse wheel zooms in/out with smooth interpolation
 ///
 /// # Example
 ///
@@ -202,22 +202,36 @@ impl Projection for Camera2D {
 /// window.on_scroll(|_, y| {
 ///     controller.on_scroll(y);
 /// });
+///
+/// // In render loop - call update() for smooth zoom animation
+/// app.on_render(|renderer| {
+///     controller.update(dt);
+///     // ... render using controller.camera()
+/// });
 /// ```
 pub struct CameraController {
     camera: Camera2D,
+    target_scale: f32,
+    target_center: Vec2,
     is_dragging: bool,
     last_cursor_pos: Vec2,
     zoom_sensitivity: f32,
+    zoom_smoothness: f32,
 }
 
 impl CameraController {
     /// Create a new controller wrapping the given camera.
     pub fn new(camera: Camera2D) -> Self {
+        let scale = camera.scale();
+        let center = camera.center();
         Self {
             camera,
+            target_scale: scale,
+            target_center: center,
             is_dragging: false,
             last_cursor_pos: Vec2::new(0.0, 0.0),
             zoom_sensitivity: 1.1,
+            zoom_smoothness: 6.0,
         }
     }
 
@@ -227,6 +241,15 @@ impl CameraController {
     /// For example, 1.2 means 20% zoom per tick.
     pub fn set_zoom_sensitivity(&mut self, sensitivity: f32) {
         self.zoom_sensitivity = sensitivity;
+    }
+
+    /// Set zoom animation smoothness. Default is 10.0.
+    ///
+    /// Higher values = faster animation (snappier).
+    /// Lower values = slower animation (smoother).
+    /// A value of 10.0 reaches ~99% of target in ~0.5 seconds.
+    pub fn set_zoom_smoothness(&mut self, smoothness: f32) {
+        self.zoom_smoothness = smoothness;
     }
 
     /// Handle mouse button events. Call this from `Window::on_mouse_button`.
@@ -245,7 +268,10 @@ impl CameraController {
                 cursor.x - self.last_cursor_pos.x,
                 cursor.y - self.last_cursor_pos.y,
             );
-            self.camera.pan_screen(delta);
+            // Update target_center only - let update() smoothly interpolate
+            let scale = self.target_scale;
+            self.target_center.x -= delta.x / scale;
+            self.target_center.y -= delta.y / scale;
         }
 
         self.last_cursor_pos = cursor;
@@ -253,14 +279,59 @@ impl CameraController {
 
     /// Handle scroll events for zooming. Call this from `Window::on_scroll`.
     ///
-    /// Zooms centered on the current cursor position.
+    /// Zooms centered on the current cursor position with smooth animation.
     pub fn on_scroll(&mut self, y_offset: f64) {
         let factor = if y_offset > 0.0 {
             self.zoom_sensitivity
         } else {
             1.0 / self.zoom_sensitivity
         };
-        self.camera.zoom_at(factor, self.last_cursor_pos);
+
+        // Compute target state using zoom_at logic
+        // Get world position under cursor at current target state
+        let world_point = self.world_at_screen(self.last_cursor_pos);
+
+        // Apply zoom factor to target scale
+        self.target_scale *= factor;
+
+        // Compute new target center to keep world_point under cursor
+        // screen_point = (world - center) * scale + screen_size/2
+        // Solving for center: center = world - (screen_point - screen_size/2) / scale
+        let screen_size = self.camera.screen_size();
+        self.target_center = Vec2 {
+            x: world_point.x - (self.last_cursor_pos.x - screen_size.x * 0.5) / self.target_scale,
+            y: world_point.y - (self.last_cursor_pos.y - screen_size.y * 0.5) / self.target_scale,
+        };
+    }
+
+    /// Update camera animation. Call this each frame with delta time in seconds.
+    ///
+    /// This smoothly interpolates the camera toward the target zoom level.
+    pub fn update(&mut self, dt: f32) {
+        // Exponential decay interpolation
+        let t = 1.0 - (-self.zoom_smoothness * dt).exp();
+
+        // Interpolate scale
+        let current_scale = self.camera.scale();
+        let new_scale = current_scale + (self.target_scale - current_scale) * t;
+        self.camera.set_scale(new_scale);
+
+        // Interpolate center
+        let current_center = self.camera.center();
+        let new_center = Vec2 {
+            x: current_center.x + (self.target_center.x - current_center.x) * t,
+            y: current_center.y + (self.target_center.y - current_center.y) * t,
+        };
+        self.camera.set_center(new_center);
+    }
+
+    /// Get world coordinates at a screen position using target state.
+    fn world_at_screen(&self, screen: Vec2) -> Vec2 {
+        let screen_size = self.camera.screen_size();
+        Vec2 {
+            x: (screen.x - screen_size.x * 0.5) / self.target_scale + self.target_center.x,
+            y: (screen.y - screen_size.y * 0.5) / self.target_scale + self.target_center.y,
+        }
     }
 
     /// Get a reference to the underlying camera.
