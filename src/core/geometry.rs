@@ -203,9 +203,6 @@ impl Geometry {
 
         gl_bind_vertex_array(0);
         gl_bind_buffer(GL_ARRAY_BUFFER, 0);
-
-        // Also allocate the color instance buffer
-        self.enable_instancing_color(max_instances);
     }
 
     pub fn enable_instancing_color(&mut self, max_instances: usize) {
@@ -251,7 +248,9 @@ impl Geometry {
     }
 
     pub fn update_instance_colors(&mut self, colors: &[Color]) {
-        if self.instance_color_vbo == 0 { return; }
+        if self.instance_color_vbo == 0 {
+            self.enable_instancing_color(colors.len());
+        }
         gl_bind_vertex_array(self.vao);
         gl_bind_buffer(GL_ARRAY_BUFFER, self.instance_color_vbo);
 

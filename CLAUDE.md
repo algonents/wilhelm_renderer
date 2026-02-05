@@ -127,6 +127,36 @@ Logical grouping belongs in client code (e.g., `AircraftTrack` in SkyTracker), n
 
 Performance optimizations are driven by actual bottlenecks discovered in client code, not speculation. The simple per-shape API is preferred until profiling proves it insufficient. The escape hatch (`App::on_render()` with direct instancing) exists for power users who hit limits before library-level batching is added.
 
+## Instancing Color Architecture
+
+The shape shader (`shape.vert` / `shape.frag`) supports optional per-instance colors via vertex attribute location 2 (`aInstanceColor`, vec4). The mechanism works as follows:
+
+**Shader logic (shape.frag):**
+```glsl
+if (vInstanceColor.a > 0.0)
+    FragColor = vInstanceColor;       // per-instance color
+else
+    FragColor = vec4(geometryColor, 1); // uniform fallback
+```
+
+**How the fallback works:**
+- When attrib 2 is **disabled** on the VAO, OpenGL reads the generic value instead of buffer data
+- `draw_mesh_instanced` resets this generic value to `(0,0,0,0)` via `gl_vertex_attrib_4f(2, 0.0, 0.0, 0.0, 0.0)`
+- Alpha is 0, so the shader falls back to the `geometryColor` uniform — the fill color set on the mesh
+
+**Critical invariant: attrib 2 must only be enabled when color data is provided.**
+
+`enable_instancing_xy` (position-only instancing) must NOT enable attrib 2. If attrib 2 is enabled but points to an uninitialized GPU buffer, OpenGL reads garbage data with arbitrary alpha values. The shader then uses those garbage colors instead of falling back to `geometryColor`, causing random color bleeding.
+
+The color buffer is lazily initialized: `update_instance_colors` calls `enable_instancing_color` on first use, which allocates the buffer, enables attrib 2, and points it at actual color data.
+
+**Attribute locations used by the shape shader:**
+| Location | Name | Type | Usage |
+|----------|------|------|-------|
+| 0 | `aPos` | vec2 | Mesh-local vertex position |
+| 1 | `aInstanceXY` | vec2 | Per-instance screen offset (divisor=1) |
+| 2 | `aInstanceColor` | vec4 | Per-instance RGBA color (divisor=1) |
+
 ## Key Files
 
 - `src/lib.rs`: Library root, exports `core` and `graphics2d` modules
