@@ -133,16 +133,8 @@ fn main() {
     let mut app = App::new(window);
 
     let ctrl = Rc::clone(&controller);
-    let mut last_time = 0.0;
     app.on_render(move |renderer| {
-        // Compute delta time
-        let current_time = renderer.get_time();
-        let dt = (current_time - last_time) as f32;
-        last_time = current_time;
-
-        // Update camera animation
-        let mut controller = ctrl.borrow_mut();
-        controller.update(dt);
+        let controller = ctrl.borrow();
         let camera = controller.camera();
 
         // Project all waypoints to screen coordinates
