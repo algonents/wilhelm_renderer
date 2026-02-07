@@ -44,7 +44,7 @@ fn main() {
     let mut mesh = Mesh::new(Rc::new(shader), geometry);
     let mut app = App::new(window);
 
-    app.on_render(move |renderer| {
+    app.on_render(move |renderer, _| {
         let (width, height) = renderer.window_handle.size();
 
         let transform = build_transform(width as f32, height as f32, renderer.get_time());

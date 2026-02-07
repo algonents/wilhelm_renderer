@@ -13,10 +13,8 @@
 
 extern crate wilhelm_renderer;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use wilhelm_renderer::core::{
-    App, Camera2D, CameraController, Color, Projection, Renderable, Vec2, Window
+    App, Camera2D, Color, Projection, Renderable, Vec2, Window
 };
 use wilhelm_renderer::graphics2d::shapes::{ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
 
@@ -86,7 +84,7 @@ fn main() {
         (9.8355, 46.4908, "St-Moritz"),
     ];
 
-    let mut window = Window::new(
+    let window = Window::new(
         "Waypoints - WGS84 Projection",
         800, 600,
         Color::from_rgb(0.07, 0.13, 0.17),
@@ -112,46 +110,13 @@ fn main() {
     let initial_scale = (700.0 / range_x).min(500.0 / range_y);
 
     let camera = Camera2D::new(center, initial_scale, Vec2::new(800.0, 600.0));
-    let controller = Rc::new(RefCell::new(CameraController::new(camera)));
-
-    // Connect controller to window callbacks
-    let ctrl = Rc::clone(&controller);
-    window.on_mouse_button(move |button, action, _mods| {
-        ctrl.borrow_mut().on_mouse_button(button, action);
-    });
-
-    let ctrl = Rc::clone(&controller);
-    window.on_cursor_position(move |x, y| {
-        ctrl.borrow_mut().on_cursor_move(x, y);
-    });
-
-    let ctrl = Rc::clone(&controller);
-    window.on_scroll(move |_, y_offset| {
-        ctrl.borrow_mut().on_scroll(y_offset);
-    });
-
-    let ctrl = Rc::clone(&controller);
-    window.on_resize(move |width, height| {
-        ctrl.borrow_mut()
-            .camera_mut()
-            .set_screen_size(Vec2::new(width as f32, height as f32));
-    });
 
     let mut app = App::new(window);
+    app.enable_camera(camera);
+    app.set_camera_smoothness(8.0);
 
-    let ctrl = Rc::clone(&controller);
-    let mut last_time = 0.0;
-    app.on_render(move |renderer| {
-        // Compute delta time
-        let current_time = renderer.get_time();
-        let dt = (current_time - last_time) as f32;
-        last_time = current_time;
-
-        // Update camera animation
-        let mut controller = ctrl.borrow_mut();
-        controller.update(dt);
-        let camera = controller.camera();
-
+    app.on_render(move |renderer, camera| {
+        let camera = camera.unwrap();
         for waypoint in &mut waypoints {
             waypoint.update_and_render(camera, renderer);
         }

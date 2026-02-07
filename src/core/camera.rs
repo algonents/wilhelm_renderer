@@ -205,6 +205,9 @@ impl Projection for Camera2D {
 /// ```
 pub struct CameraController {
     camera: Camera2D,
+    target_scale: f32,
+    target_center: Vec2,
+    smoothness: f32,
     is_dragging: bool,
     last_cursor_pos: Vec2,
     zoom_sensitivity: f32,
@@ -213,12 +216,56 @@ pub struct CameraController {
 impl CameraController {
     /// Create a new controller wrapping the given camera.
     pub fn new(camera: Camera2D) -> Self {
+        let scale = camera.scale();
+        let center = camera.center();
         Self {
             camera,
+            target_scale: scale,
+            target_center: center,
+            smoothness: 0.0,
             is_dragging: false,
             last_cursor_pos: Vec2::new(0.0, 0.0),
             zoom_sensitivity: 1.1,
         }
+    }
+
+    /// Enable smooth animation with exponential interpolation.
+    ///
+    /// - `0.0` (default): disabled, camera updates are instant
+    /// - `> 0.0`: exponential decay rate; typical range 5–12
+    ///
+    /// When enabled, input events update animation targets and `update(dt)`
+    /// interpolates the camera toward them each frame.
+    pub fn set_smoothness(&mut self, value: f32) {
+        self.smoothness = value.max(0.0);
+        if self.smoothness == 0.0 {
+            // Snap camera to targets when disabling
+            self.camera.set_scale(self.target_scale);
+            self.camera.set_center(self.target_center);
+        }
+    }
+
+    /// Advance camera interpolation by `dt` seconds.
+    ///
+    /// Called automatically by `App::run()` when the controller is registered.
+    /// No-op when smoothness is 0 (disabled).
+    pub fn update(&mut self, dt: f32) {
+        if self.smoothness == 0.0 {
+            return;
+        }
+
+        let t = 1.0 - (-self.smoothness * dt).exp();
+
+        let current_scale = self.camera.scale();
+        let new_scale = current_scale + (self.target_scale - current_scale) * t;
+        self.camera.set_scale(new_scale);
+
+        let current_center = self.camera.center();
+        let new_center = Vec2::new(
+            current_center.x + (self.target_center.x - current_center.x) * t,
+            current_center.y + (self.target_center.y - current_center.y) * t,
+        );
+        self.camera.set_center(new_center);
     }
 
     /// Set zoom sensitivity. Default is 1.1 (10% zoom per scroll tick).
@@ -245,7 +292,13 @@ impl CameraController {
                 cursor.x - self.last_cursor_pos.x,
                 cursor.y - self.last_cursor_pos.y,
             );
-            self.camera.pan_screen(delta);
+            if self.smoothness > 0.0 {
+                // Update target; use target_scale for correct world-space delta
+                self.target_center.x -= delta.x / self.target_scale;
+                self.target_center.y -= delta.y / self.target_scale;
+            } else {
+                self.camera.pan_screen(delta);
+            }
         }
 
         self.last_cursor_pos = cursor;
@@ -260,7 +313,31 @@ impl CameraController {
         } else {
             1.0 / self.zoom_sensitivity
         };
-        self.camera.zoom_at(factor, self.last_cursor_pos);
+
+        if self.smoothness > 0.0 {
+            // Compute world point under cursor using target state
+            let screen_size = self.camera.screen_size();
+            let world_before = Vec2 {
+                x: (self.last_cursor_pos.x - screen_size.x * 0.5) / self.target_scale
+                    + self.target_center.x,
+                y: (self.last_cursor_pos.y - screen_size.y * 0.5) / self.target_scale
+                    + self.target_center.y,
+            };
+
+            self.target_scale *= factor;
+
+            let world_after = Vec2 {
+                x: (self.last_cursor_pos.x - screen_size.x * 0.5) / self.target_scale
+                    + self.target_center.x,
+                y: (self.last_cursor_pos.y - screen_size.y * 0.5) / self.target_scale
+                    + self.target_center.y,
+            };
+
+            self.target_center.x += world_before.x - world_after.x;
+            self.target_center.y += world_before.y - world_after.y;
+        } else {
+            self.camera.zoom_at(factor, self.last_cursor_pos);
+        }
     }
 
     /// Get a reference to the underlying camera.

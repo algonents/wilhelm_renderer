@@ -45,7 +45,7 @@ fn main() {
 
     let mut app = App::new(window);
 
-    app.on_render(move |renderer| {
+    app.on_render(move |renderer, _| {
         renderer.draw_mesh(&mesh)
     });
     app.run();

@@ -111,6 +111,12 @@ No architectural blockers exist. The path from current state to high-performance
 **GLFW 3.4** (window management):
 - Bundled in full, built via CMake
 
+## Design Principles
+
+1. **Easy client API**: Minimize ceremony and boilerplate for common operations. Hide internal complexity (e.g., `Rc<RefCell<>>`) behind simple methods.
+2. **Prevent unnecessary copies**: Prefer references over cloning. Only copy small, `Copy` types (e.g., `Camera2D`, `Vec2`, `Color`).
+3. **Optimized for performance**: Minimize per-frame overhead. Avoid allocations in hot paths. Prefer batched operations over per-item work.
+
 ## Design Decisions
 
 ### No Scene Graph / Composite Shapes

@@ -39,7 +39,7 @@ fn main() {
     let mut shapes: Vec<ShapeRenderable> = Vec::new();
 
     let positions_render = Arc::clone(&positions);
-    app.on_render(move |renderer| {
+    app.on_render(move |renderer, _| {
         let pos_data = positions_render.read().unwrap();
 
         if pos_data.len() > shapes.len() {
