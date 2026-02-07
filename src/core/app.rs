@@ -1,8 +1,7 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::core::camera::{Camera2D, CameraController};
-use crate::core::engine::opengl::Vec2;
 use crate::core::renderer::{Renderable, Renderer};
 use crate::core::Window;
 use crate::graphics2d::shapes::ShapeRenderable;
@@ -69,13 +68,20 @@ impl<'a> App<'a> {
     /// and resize callbacks on the window. The camera is passed to the
     /// `on_render` callback each frame as `Option<&Camera2D>`.
     ///
+    /// Returns an `Rc<Cell<bool>>` flag that blocks camera input when set to
+    /// `true`. Use this to prevent pan/zoom when the mouse is over a GUI
+    /// overlay (e.g., ImGui's `want_capture_mouse()`).
+    ///
     /// Use [`set_camera_smoothness`](Self::set_camera_smoothness) to enable
     /// smooth animation after calling this method.
-    pub fn enable_camera(&mut self, camera: Camera2D) {
+    pub fn enable_camera(&mut self, camera: Camera2D) -> Rc<Cell<bool>> {
         let controller = Rc::new(RefCell::new(CameraController::new(camera)));
+        let blocked = Rc::new(Cell::new(false));
 
         let ctrl = Rc::clone(&controller);
+        let b = Rc::clone(&blocked);
         self.window.on_mouse_button(move |button, action, _| {
+            if b.get() { return; }
             ctrl.borrow_mut().on_mouse_button(button, action);
         });
 
@@ -85,18 +91,19 @@ impl<'a> App<'a> {
         });
 
         let ctrl = Rc::clone(&controller);
+        let b = Rc::clone(&blocked);
         self.window.on_scroll(move |_, y_offset| {
+            if b.get() { return; }
             ctrl.borrow_mut().on_scroll(y_offset);
         });
 
         let ctrl = Rc::clone(&controller);
         self.window.on_resize(move |width, height| {
-            ctrl.borrow_mut()
-                .camera_mut()
-                .set_screen_size(Vec2::new(width as f32, height as f32));
+            ctrl.borrow_mut().on_resize(width as f32, height as f32);
         });
 
         self.camera_controller = Some(controller);
+        blocked
     }
 
     /// Set camera smoothness for animated interpolation.

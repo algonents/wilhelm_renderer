@@ -300,6 +300,17 @@ impl CameraController {
         s
     }
 
+    /// Handle window resize. Adjusts scale to maintain the same visible world bounds.
+    pub fn on_resize(&mut self, width: f32, height: f32) {
+        let old_size = self.camera.screen_size();
+        let scale_factor = (width / old_size.x).min(height / old_size.y);
+        self.camera.set_scale(self.camera.scale() * scale_factor);
+        self.camera.set_screen_size(Vec2::new(width, height));
+        if self.smoothness > 0.0 {
+            self.target_scale *= scale_factor;
+        }
+    }
+
     /// Handle mouse button events. Call this from `Window::on_mouse_button`.
     pub fn on_mouse_button(&mut self, button: i32, action: i32) {
         if button == GLFW_MOUSE_BUTTON_LEFT {
