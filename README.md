@@ -81,6 +81,20 @@ Additional examples:
 
   ![Bouncing Balls](https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/bouncing_balls_instanced.png)
 
+## 🛠️ IDE Setup (C++ Language Server)
+
+The C++ component uses CMake. To enable clangd support in Neovim (or any editor that uses clangd),
+generate a `compile_commands.json`:
+
+```shell
+cmake -S cpp -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+```
+
+For Neovim, clangd is configured via `nvim-lspconfig` with `--compile-commands-dir=build`, so it
+will automatically pick up the generated file from the `build/` directory.
+
+This only needs to be re-run when `cpp/CMakeLists.txt` changes. The `build/` directory is gitignored.
+
 ## 🐞 Issues
 
 You can report issues directly on [GitHub](https://github.com/algonents/wilhelm-renderer/issues).
