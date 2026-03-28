@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 200" width="220" height="200">
+  <!-- Minimal W from connected dots/vertices -->
+  <circle cx="15" cy="50" r="5" fill="#00b43c" />
+  <circle cx="45" cy="150" r="5" fill="#00b43c" />
+  <circle cx="75" cy="70" r="5" fill="#00b43c" />
+  <circle cx="105" cy="150" r="5" fill="#00b43c" />
+  <circle cx="135" cy="50" r="5" fill="#00b43c" />
+  <polyline points="15,50 45,150 75,70 105,150 135,50" fill="none" stroke="#00b43c" stroke-width="3" />
+  <!-- Minimal R from vertices and arc -->
+  <circle cx="160" cy="50" r="5" fill="#00b43c" />
+  <circle cx="160" cy="150" r="5" fill="#00b43c" />
+  <circle cx="160" cy="100" r="5" fill="#00b43c" />
+  <circle cx="205" cy="150" r="5" fill="#00b43c" />
+  <line x1="160" y1="50" x2="160" y2="150" stroke="#00b43c" stroke-width="3" />
+  <path d="M160,50 Q200,50 200,75 Q200,100 160,100" fill="none" stroke="#00b43c" stroke-width="3" />
+  <line x1="160" y1="100" x2="205" y2="150" stroke="#00b43c" stroke-width="3" />
+</svg>
