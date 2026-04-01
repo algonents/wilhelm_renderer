@@ -56,7 +56,7 @@ fn main() {
     scaled_rotated.set_scale(1.5);
 
     // Image rotation
-    let mut bunny = ShapeRenderable::image("images/bunny.png");
+    let mut bunny = ShapeRenderable::image("../../images/bunny.png");
     bunny.set_position(400.0, 300.0);
 
     app.add_shapes(vec![triangle, rectangle, circle, scaled_rotated, bunny]);

@@ -5,10 +5,10 @@ edition = "2021"
 authors = ["Anwar Ludin <anwar.ludin@algonents.com>"]
 license = "MIT"
 
-description = "A minimalist 2D data rendering engine"
+description = "A minimalist 2D graphics engine"
 repository = "https://github.com/algonents/wilhelm-renderer"
 readme = "README.md"
-keywords = ["opengl", "visualization"]
+keywords = ["opengl", "visualization", "graphics2D"]
 categories = ["graphics", "rendering::graphics-api"]
 exclude = [
     ".idea/",
@@ -16,9 +16,9 @@ exclude = [
     "CLAUDE.md",
     "MEMORY PERFORMANCE.md",
     "OPENGL.md",
-    "RADAR PRIMITIVES.md",
     "ROADMAP.md",
     "TODO.md",
+    "examples/",
 ]
 
 [dependencies]
@@ -28,6 +28,20 @@ image = "0.25.6"
 [build-dependencies]
 cmake = "0.1.52"
 
-[[example]]
-name = "keyboard"
-path = "examples/keyboard.rs"
+[workspace]
+members = [
+    ".",
+    "examples/bouncing_balls",
+    "examples/bouncing_balls_instanced",
+    "examples/instancing",
+    "examples/keyboard",
+    "examples/rotations",
+    "examples/shapes",
+    "examples/shapes_scaled",
+    "examples/text",
+    "examples/transforms",
+    "examples/triangle",
+    "examples/waypoints",
+    "examples/waypoints_instanced",
+    "examples/window",
+]
