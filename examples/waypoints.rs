@@ -53,12 +53,10 @@ impl Waypoint {
     fn new(lon: f32, lat: f32, name: &str, color: Color, triangle: &Triangle) -> Self {
         let m = wgs84_to_mercator(Vec2::new(lon, lat));
         let marker = ShapeRenderable::from_shape(
-            0.0, 0.0,
             ShapeKind::Triangle(triangle.clone()),
             ShapeStyle::fill(color),
         );
         let label = ShapeRenderable::from_shape(
-            0.0, 0.0,
             ShapeKind::Text(Text::new(name, FONT_PATH, FONT_SIZE)),
             ShapeStyle::fill(color),
         );

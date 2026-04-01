@@ -211,17 +211,29 @@ impl Renderable for ShapeRenderable {
 }
 
 impl ShapeRenderable {
-    fn new(x: f32, y: f32, mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x, y, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: None, shape }
+    fn new(mesh: Mesh, shape: ShapeKind) -> Self {
+        Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: None, shape }
     }
 
-    fn new_with_stroke(x: f32, y: f32, mesh: Mesh, stroke_mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x, y, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: Some(stroke_mesh), shape }
+    fn new_with_stroke(mesh: Mesh, stroke_mesh: Mesh, shape: ShapeKind) -> Self {
+        Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: Some(stroke_mesh), shape }
     }
 
     pub fn set_position(&mut self, x: f32, y: f32) {
         self.x = x;
         self.y = y;
+    }
+
+    pub fn x(&self) -> f32 {
+        self.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.y
+    }
+
+    pub fn position(&self) -> (f32, f32) {
+        (self.x, self.y)
     }
 
     pub fn set_scale(&mut self, scale: f32) {
@@ -239,25 +251,21 @@ impl ShapeRenderable {
     pub fn rotation(&self) -> f32 {
         self.rotation
     }
-    pub fn from_shape(x: f32, y: f32, shape: ShapeKind, style: ShapeStyle) -> Self {
+    pub fn from_shape(shape: ShapeKind, style: ShapeStyle) -> Self {
         match shape {
             ShapeKind::Point => {
-                ShapeRenderable::point(x, y, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::point(style.fill.unwrap_or(Color::white()))
             }
             ShapeKind::MultiPoint(mp) => {
-                ShapeRenderable::multi_points(x, y, mp, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::multi_points(mp, style.fill.unwrap_or(Color::white()))
             }
             ShapeKind::Line(line) => ShapeRenderable::line(
-                x,
-                y,
                 line,
                 style.stroke_color.unwrap_or_else(Color::white),
                 style.stroke_width.unwrap_or(1.0),
             ),
             ShapeKind::Polyline(poly_line) => {
                 ShapeRenderable::polyline(
-                    x,
-                    y,
                     poly_line,
                     style.stroke_color.unwrap_or(Color::white()),
                     style.stroke_width.unwrap_or(1.0),
@@ -265,7 +273,7 @@ impl ShapeRenderable {
             }
 
             ShapeKind::Triangle(triangle) => {
-                ShapeRenderable::triangle(x, y, triangle, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::triangle(triangle, style.fill.unwrap_or(Color::white()))
             }
 
             ShapeKind::Rectangle(rect) => {
@@ -273,8 +281,6 @@ impl ShapeRenderable {
                     (Some(fill), Some(stroke)) => {
                         // Fill and stroke
                         ShapeRenderable::rectangle_fill_and_stroke(
-                            x,
-                            y,
                             rect,
                             fill,
                             stroke,
@@ -284,8 +290,6 @@ impl ShapeRenderable {
                     (None, Some(stroke)) => {
                         // Stroke-only
                         ShapeRenderable::rectangle_outline(
-                            x,
-                            y,
                             rect,
                             stroke,
                             style.stroke_width.unwrap_or(1.0),
@@ -293,27 +297,25 @@ impl ShapeRenderable {
                     }
                     (fill, None) => {
                         // Fill-only (default)
-                        ShapeRenderable::rectangle(x, y, rect, fill.unwrap_or(Color::white()))
+                        ShapeRenderable::rectangle(rect, fill.unwrap_or(Color::white()))
                     }
                 }
             }
 
             ShapeKind::RoundedRectangle(rr) => {
-                ShapeRenderable::rounded_rectangle(x, y, rr, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::rounded_rectangle(rr, style.fill.unwrap_or(Color::white()))
             }
 
             ShapeKind::Polygon(polygon) => {
-                ShapeRenderable::polygon(x, y, polygon, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::polygon(polygon, style.fill.unwrap_or(Color::white()))
             }
             ShapeKind::Circle(circle) => {
-                ShapeRenderable::circle(x, y, circle, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::circle(circle, style.fill.unwrap_or(Color::white()))
             }
             ShapeKind::Ellipse(ellipse) => {
-                ShapeRenderable::ellipse(x, y, ellipse, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::ellipse(ellipse, style.fill.unwrap_or(Color::white()))
             }
             ShapeKind::Arc(arc) => ShapeRenderable::arc(
-                x,
-                y,
                 arc,
                 style.stroke_color.unwrap_or(Color::white()),
                 style.stroke_width.unwrap_or(1.0),
@@ -322,7 +324,7 @@ impl ShapeRenderable {
                 unimplemented!("ShapeRenderable::from_shape cannot create Image without path")
             }
             ShapeKind::Text(text) => {
-                ShapeRenderable::text(x, y, text, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::text(text, style.fill.unwrap_or(Color::white()))
             }
         }
     }
@@ -358,71 +360,60 @@ impl ShapeRenderable {
         }
     }
 
-    fn point(x: GLfloat, y: GLfloat, color: Color) -> Self {
+    fn point(color: Color) -> Self {
         let geometry = ShapeRenderable::point_geometry();
         let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Point)
+        ShapeRenderable::new(mesh, ShapeKind::Point)
     }
 
-    fn multi_points(x: GLfloat, y: GLfloat, multi_point: MultiPoint, color: Color) -> Self {
-        let abs_points: Vec<(f32, f32)> = multi_point
+    fn multi_points(multi_point: MultiPoint, color: Color) -> Self {
+        let (x0, y0) = multi_point.points[0];
+
+        // Shift points to be relative to first point (anchor)
+        let rel_points: Vec<(GLfloat, GLfloat)> = multi_point
             .points
             .iter()
-            .map(|(px, py)| (x + px, y + py))
+            .map(|(px, py)| (px - x0, py - y0))
             .collect();
-
-        let (x0, y0) = abs_points[0];
-
-        // Shift points to be relative to anchor
-        let rel_points: Vec<(GLfloat, GLfloat)> =
-            abs_points.iter().map(|(x, y)| (x - x0, y - y0)).collect();
 
         let geometry = ShapeRenderable::point_list_geometry(&rel_points);
         let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
 
-        ShapeRenderable::new(x0, y0, mesh, ShapeKind::MultiPoint(multi_point))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::MultiPoint(multi_point));
+        s.x = x0;
+        s.y = y0;
+        s
     }
 
-    fn line(
-        x: GLfloat,
-        y: GLfloat,
-        shape: Line,
-        stroke: Color,
-        stroke_width: f32,
-    ) -> Self {
-        // Line geometry uses its own local coordinates (start to end)
-        // Position (x, y) places the line in world space
+    fn line(shape: Line, stroke: Color, stroke_width: f32) -> Self {
         let (x1, y1) = shape.start;
         let (x2, y2) = shape.end;
         let geometry = ShapeRenderable::line_geometry(x1, y1, x2, y2, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
 
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Line(shape))
+        ShapeRenderable::new(mesh, ShapeKind::Line(shape))
     }
 
-    fn polyline(
-        x: f32,
-        y: f32,
-        polyline: Polyline,
-        stroke: Color,
-        stroke_width: f32,
-    ) -> Self {
+    fn polyline(polyline: Polyline, stroke: Color, stroke_width: f32) -> Self {
         assert!(polyline.points.len() >= 2, "Polyline requires at least two points");
 
-        let abs_points: Vec<(f32, f32)> =
-            polyline.points.iter().map(|(px, py)| (x + px, y + py)).collect();
-
-
-        let (x0, y0) = abs_points[0];
-        let rel_points: Vec<(f32, f32)> = abs_points.iter().map(|(x, y)| (x - x0, y - y0)).collect();
+        let (x0, y0) = polyline.points[0];
+        let rel_points: Vec<(f32, f32)> = polyline
+            .points
+            .iter()
+            .map(|(px, py)| (px - x0, py - y0))
+            .collect();
 
         let geometry = ShapeRenderable::polyline_geometry(&rel_points, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
 
-        ShapeRenderable::new(x0, y0, mesh, ShapeKind::Polyline(polyline))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Polyline(polyline));
+        s.x = x0;
+        s.y = y0;
+        s
     }
 
-    /// Helper for arc: creates a polyline from pre-computed absolute points
+    /// Helper for arc: creates a polyline from pre-computed points
     fn polyline_from_points(
         points: &[(f32, f32)],
         shape: ShapeKind,
@@ -437,10 +428,13 @@ impl ShapeRenderable {
         let geometry = ShapeRenderable::polyline_geometry(&rel_points, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
 
-        ShapeRenderable::new(x0, y0, mesh, shape)
+        let mut s = ShapeRenderable::new(mesh, shape);
+        s.x = x0;
+        s.y = y0;
+        s
     }
 
-    fn arc(x: f32, y: f32, arc: ArcShape, stroke: Color, stroke_width: f32) -> Self {
+    fn arc(arc: ArcShape, stroke: Color, stroke_width: f32) -> Self {
         use std::f32::consts::TAU;
 
         let segments = 64;
@@ -451,39 +445,33 @@ impl ShapeRenderable {
             sweep += TAU;
         }
 
-        // Generate points counter-clockwise from start to end
+        // Generate points at origin, counter-clockwise from start to end
         let mut points = Vec::with_capacity(segments + 1);
         for i in 0..=segments {
             let t = i as f32 / segments as f32;
             let theta = arc.start_angle + t * sweep;
-            let px = x + arc.radius * theta.cos();
-            let py = y - arc.radius * theta.sin();
+            let px = arc.radius * theta.cos();
+            let py = -arc.radius * theta.sin();
             points.push((px, py));
         }
 
         Self::polyline_from_points(&points, ShapeKind::Arc(arc), stroke, stroke_width)
     }
 
-    fn triangle(x: f32, y: f32, triangle: Triangle, color: Color) -> Self {
+    fn triangle(triangle: Triangle, color: Color) -> Self {
         let geometry = ShapeRenderable::triangle_geometry(&triangle.vertices);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Triangle(triangle))
+        ShapeRenderable::new(mesh, ShapeKind::Triangle(triangle))
     }
 
-    fn rectangle(x: f32, y: f32, rect: Rectangle, color: Color) -> Self {
+    fn rectangle(rect: Rectangle, color: Color) -> Self {
         let geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Rectangle(rect))
+        ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect))
     }
 
-    fn rectangle_outline(
-        x: f32,
-        y: f32,
-        rect: Rectangle,
-        stroke: Color,
-        stroke_width: f32,
-    ) -> Self {
+    fn rectangle_outline(rect: Rectangle, stroke: Color, stroke_width: f32) -> Self {
         // Create a closed polyline forming the rectangle border
         // Points: top-left -> top-right -> bottom-right -> bottom-left -> back to top-left
         // Extra point at end provides direction for proper miter join at closing corner
@@ -498,12 +486,10 @@ impl ShapeRenderable {
 
         let geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Rectangle(rect))
+        ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect))
     }
 
     fn rectangle_fill_and_stroke(
-        x: f32,
-        y: f32,
         rect: Rectangle,
         fill: Color,
         stroke: Color,
@@ -525,44 +511,48 @@ impl ShapeRenderable {
         let stroke_geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
         let stroke_mesh = Mesh::with_color(default_shader(), stroke_geometry, Some(stroke));
 
-        ShapeRenderable::new_with_stroke(x, y, fill_mesh, stroke_mesh, ShapeKind::Rectangle(rect))
+        ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::Rectangle(rect))
     }
 
-    fn rounded_rectangle(x: f32, y: f32, rr: RoundedRectangle, color: Color) -> Self {
+    fn rounded_rectangle(rr: RoundedRectangle, color: Color) -> Self {
         let geometry =
             ShapeRenderable::rounded_rectangle_geometry(rr.width, rr.height, rr.radius, 8);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(x, y, mesh, ShapeKind::RoundedRectangle(rr))
+        ShapeRenderable::new(mesh, ShapeKind::RoundedRectangle(rr))
     }
 
-    fn polygon(x: f32, y: f32, polygon: Polygon, color: Color) -> Self {
+    fn polygon(polygon: Polygon, color: Color) -> Self {
         assert!(polygon.points.len() >= 3, "Polygon requires at least 3 points");
 
-        let abs_points: Vec<(f32, f32)> =
-            polygon.points.iter().map(|(px, py)| (x + px, y + py)).collect();
-
-        let (x0, y0) = abs_points[0]; // Anchor
-        let rel_points: Vec<(f32, f32)> = abs_points.iter().map(|(x, y)| (x - x0, y - y0)).collect();
+        let (x0, y0) = polygon.points[0];
+        let rel_points: Vec<(f32, f32)> = polygon
+            .points
+            .iter()
+            .map(|(px, py)| (px - x0, py - y0))
+            .collect();
 
         let geometry = ShapeRenderable::polygon_geometry(&rel_points);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
-        ShapeRenderable::new(x0, y0, mesh, ShapeKind::Polygon(polygon))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Polygon(polygon));
+        s.x = x0;
+        s.y = y0;
+        s
     }
 
-    fn circle(x: f32, y: f32, circle: Circle, color: Color) -> Self {
+    fn circle(circle: Circle, color: Color) -> Self {
         let geometry = ShapeRenderable::circle_geometry(circle.radius, 100);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Circle(circle))
+        ShapeRenderable::new(mesh, ShapeKind::Circle(circle))
     }
 
-    fn ellipse(x: f32, y: f32, ellipse: Ellipse, color: Color) -> Self {
+    fn ellipse(ellipse: Ellipse, color: Color) -> Self {
         let geometry = ShapeRenderable::ellipse_geometry(ellipse.radius_x, ellipse.radius_y, 64);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Ellipse(ellipse))
+        ShapeRenderable::new(mesh, ShapeKind::Ellipse(ellipse))
     }
 
-    fn text(x: f32, y: f32, text: Text, color: Color) -> Self {
+    fn text(text: Text, color: Color) -> Self {
         // Get or create font atlas from cache (shared across text renderables)
         let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size);
 
@@ -580,33 +570,22 @@ impl ShapeRenderable {
         let mut mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
         mesh.color = Some(color);
 
-        // FontAtlas is owned by FONT_CACHE, properly dropped when thread exits
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Text(text))
+        ShapeRenderable::new(mesh, ShapeKind::Text(text))
     }
 
-    pub fn image_with_size(x: f32, y: f32, path: &str, width: f32, height: f32) -> ShapeRenderable {
-        // Load image data and upload to GPU
+    pub fn image_with_size(path: &str, width: f32, height: f32) -> ShapeRenderable {
         let image = load_image(path);
-
         let texture_id = generate_texture_from_image(&image);
-
-        // You likely want to query dimensions in `generate_texture_from_image`
-        // But if not, load dimensions again:
-        //let (width, height, _) = load_image(path); // image module only used for size
-
-        // Create image geometry (2-triangle quad)
         let geometry = ShapeRenderable::image_geometry(width, height);
-
-        // Use image shader and attach texture
-        let shader = image_shader(); // assumes you have an Rc<Shader> loader
+        let shader = image_shader();
         let mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
 
-        ShapeRenderable::new(x, y, mesh, ShapeKind::Image(Image::new(width, height)))
+        ShapeRenderable::new(mesh, ShapeKind::Image(Image::new(width, height)))
     }
 
-    pub fn image(x: f32, y: f32, path: &str) -> Self {
+    pub fn image(path: &str) -> Self {
         let image = load_image(path);
-        Self::image_with_size(x, y, path, image.width as f32, image.height as f32)
+        Self::image_with_size(path, image.width as f32, image.height as f32)
     }
 
     fn point_geometry() -> Geometry {

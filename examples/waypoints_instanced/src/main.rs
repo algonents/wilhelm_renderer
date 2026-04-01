@@ -84,7 +84,6 @@ fn main() {
 
     // One instanced shape for all markers (1 draw call)
     let mut markers = ShapeRenderable::from_shape(
-        0.0, 0.0,
         ShapeKind::Triangle(triangle),
         ShapeStyle::fill(color),
     );
@@ -95,7 +94,6 @@ fn main() {
         .iter()
         .map(|(_, _, name)| {
             ShapeRenderable::from_shape(
-                0.0, 0.0,
                 ShapeKind::Text(Text::new(*name, FONT_PATH, FONT_SIZE)),
                 ShapeStyle::fill(color),
             )
