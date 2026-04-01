@@ -24,7 +24,6 @@ fn main() {
     let mut app = App::new(window);
 
     let mut dots = ShapeRenderable::from_shape(
-        0.0, 0.0,
         ShapeKind::Circle(Circle::new(BALL_RADIUS)),
         ShapeStyle {
             fill: Some(Color::from_rgb(0.254902, 0.411765, 0.882353)),

@@ -74,76 +74,83 @@ fn main() {
         (-25.0, -43.4),
     ];
 
+    let shape = |pos: (f32, f32), kind: ShapeKind, style: ShapeStyle| -> ShapeRenderable {
+        let mut s = ShapeRenderable::from_shape(kind, style);
+        s.set_position(pos.0, pos.1);
+        s
+    };
+
+    let image_sized = |pos: (f32, f32), path: &str, w: f32, h: f32| -> ShapeRenderable {
+        let mut s = ShapeRenderable::image_with_size(path, w, h);
+        s.set_position(pos.0, pos.1);
+        s
+    };
+
+    let image = |pos: (f32, f32), path: &str| -> ShapeRenderable {
+        let mut s = ShapeRenderable::image(path);
+        s.set_position(pos.0, pos.1);
+        s
+    };
+
     app.add_shapes(vec![
         // Line from (100, 200) to (300, 250)
-        ShapeRenderable::from_shape(
-            0.0, 0.0,
+        shape((0.0, 0.0),
             ShapeKind::Line(Line::new((100.0, 200.0), (300.0, 250.0))),
             stroke_style(Color::from_rgb(0.0, 1.0, 0.0), 1.0),
         ),
         // Polyline starting at (100, 300)
-        ShapeRenderable::from_shape(
-            100.0, 300.0,
+        shape((100.0, 300.0),
             ShapeKind::Polyline(Polyline::new(polyline_points)),
             stroke_style(Color::from_rgb(0.0, 1.0, 0.0), 10.0),
         ),
         // Rectangle at (50, 50)
-        ShapeRenderable::from_shape(
-            50.0, 50.0,
+        shape((50.0, 50.0),
             ShapeKind::Rectangle(Rectangle::new(200.0, 80.0)),
             fill_style(Color::from_rgb(0.2, 0.5, 0.9)),
         ),
         // Rectangle at (400, 200)
-        ShapeRenderable::from_shape(
-            400.0, 200.0,
+        shape((400.0, 200.0),
             ShapeKind::Rectangle(Rectangle::new(100.0, 50.0)),
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
         ),
         // Circle at (400, 400)
-        ShapeRenderable::from_shape(
-            400.0, 400.0,
+        shape((400.0, 400.0),
             ShapeKind::Circle(Circle::new(50.0)),
             fill_style(Color::from_rgb(0.0, 0.0, 1.0)),
         ),
         // Point at (600, 300)
-        ShapeRenderable::from_shape(
-            600.0, 300.0,
+        shape((600.0, 300.0),
             ShapeKind::Point,
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
         ),
         // MultiPoint at (600, 100)
-        ShapeRenderable::from_shape(
-            600.0, 100.0,
+        shape((600.0, 100.0),
             ShapeKind::MultiPoint(MultiPoint::new(multipoint_points)),
             fill_style(Color::from_rgb(0.0, 0.0, 1.0)),
         ),
         // Ellipse at (600, 200)
-        ShapeRenderable::from_shape(
-            600.0, 200.0,
+        shape((600.0, 200.0),
             ShapeKind::Ellipse(Ellipse::new(80.0, 40.0)),
             fill_style(Color::from_rgb(0.5, 0.2, 0.8)),
         ),
         // Rounded rectangle at (100, 600)
-        ShapeRenderable::from_shape(
-            100.0, 600.0,
+        shape((100.0, 600.0),
             ShapeKind::RoundedRectangle(RoundedRectangle::new(200.0, 80.0, 10.0)),
             fill_style(Color::from_rgb(0.3, 0.6, 0.9)),
         ),
         // Polygon (hexagon) at (600, 600)
-        ShapeRenderable::from_shape(
-            600.0, 600.0,
+        shape((600.0, 600.0),
             ShapeKind::Polygon(Polygon::new(polygon_points)),
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
         ),
         // Rectangle at (600, 400)
-        ShapeRenderable::from_shape(
-            600.0, 400.0,
+        shape((600.0, 400.0),
             ShapeKind::Rectangle(Rectangle::new(100.0, 50.0)),
             fill_style(Color::from_rgb(0.0, 1.0, 0.0)),
         ),
         // Images
-        ShapeRenderable::image_with_size(200.0, 300.0, "images/smiley.png", 40.0, 40.0),
-        ShapeRenderable::image(400.0, 500.0, "images/bunny.png"),
+        image_sized((200.0, 300.0), "images/smiley.png", 40.0, 40.0),
+        image((400.0, 500.0), "images/bunny.png"),
     ]);
 
     app.on_pre_render(move |shapes, _renderer| {

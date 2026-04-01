@@ -44,16 +44,16 @@ fn main() {
 
         if pos_data.len() > shapes.len() {
             for snap in &pos_data[shapes.len()..] {
-                shapes.push(ShapeRenderable::from_shape(
-                    snap.x,
-                    snap.y,
+                let mut shape = ShapeRenderable::from_shape(
                     ShapeKind::Circle(Circle::new(BALL_RADIUS)),
                     ShapeStyle {
                         fill: Some(Color::from_rgb(snap.r, snap.g, snap.b)),
                         stroke_color: None,
                         stroke_width: None,
                     },
-                ));
+                );
+                shape.set_position(snap.x, snap.y);
+                shapes.push(shape);
             }
         }
 

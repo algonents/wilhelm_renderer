@@ -21,30 +21,29 @@ fn main() {
 
     // Triangle (vertices centered at origin)
     let mut triangle = ShapeRenderable::from_shape(
-        150.0, 150.0,
         ShapeKind::Triangle(Triangle::new(create_equilateral_triangle(80.0))),
         ShapeStyle::fill(Color::from_rgb(1.0, 0.3, 0.3)),
     );
+    triangle.set_position(150.0, 150.0);
     triangle.set_rotation(PI / 4.0); // 45 degrees
 
     // Rectangle - geometry starts at (0,0) so rotation is around top-left corner
     let mut rectangle = ShapeRenderable::from_shape(
-        200.0, 400.0,
         ShapeKind::Rectangle(Rectangle::new(100.0, 60.0)),
         ShapeStyle::fill(Color::from_rgb(0.3, 1.0, 0.3)),
     );
+    rectangle.set_position(200.0, 400.0);
     rectangle.set_rotation(PI / 6.0); // 30 degrees
 
     // Circle (rotation has no visible effect on a circle)
-    let circle = ShapeRenderable::from_shape(
-        550.0, 150.0,
+    let mut circle = ShapeRenderable::from_shape(
         ShapeKind::Circle(Circle::new(50.0)),
         ShapeStyle::fill(Color::from_rgb(0.3, 0.3, 1.0)),
     );
+    circle.set_position(550.0, 150.0);
 
     // Rectangle with combined scale, rotation, and stroke
     let mut scaled_rotated = ShapeRenderable::from_shape(
-        550.0, 350.0,
         ShapeKind::Rectangle(Rectangle::new(80.0, 40.0)),
         ShapeStyle::fill_and_stroke(
             Color::from_rgb(1.0, 1.0, 0.3),
@@ -52,11 +51,13 @@ fn main() {
             3.0,
         ),
     );
+    scaled_rotated.set_position(550.0, 350.0);
     scaled_rotated.set_rotation(PI / 3.0); // 60 degrees
     scaled_rotated.set_scale(1.5);
 
     // Image rotation
-    let bunny = ShapeRenderable::image(400.0, 300.0, "images/bunny.png");
+    let mut bunny = ShapeRenderable::image("images/bunny.png");
+    bunny.set_position(400.0, 300.0);
 
     app.add_shapes(vec![triangle, rectangle, circle, scaled_rotated, bunny]);
 

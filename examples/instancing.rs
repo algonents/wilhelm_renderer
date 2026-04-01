@@ -23,7 +23,6 @@ fn main() {
 
     // One shape, many instances
     let mut dots = ShapeRenderable::from_shape(
-        0.0, 0.0,
         ShapeKind::Circle(Circle::new(RADIUS)),
         ShapeStyle {
             fill: Some(Color::from_rgb(STEEL_BLUE.0, STEEL_BLUE.1, STEEL_BLUE.2)),

@@ -28,7 +28,6 @@ fn main() {
         (0..balls.len())
             .map(|_| {
                 ShapeRenderable::from_shape(
-                    0.0, 0.0,
                     ShapeKind::Circle(Circle::new(BALL_RADIUS)),
                     ShapeStyle {
                         fill: Some(Color::from_rgb(
