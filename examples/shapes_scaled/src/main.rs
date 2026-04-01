@@ -149,8 +149,8 @@ fn main() {
             fill_style(Color::from_rgb(0.0, 1.0, 0.0)),
         ),
         // Images
-        image_sized((200.0, 300.0), "images/smiley.png", 40.0, 40.0),
-        image((400.0, 500.0), "images/bunny.png"),
+        image_sized((200.0, 300.0), "../../images/smiley.png", 40.0, 40.0),
+        image((400.0, 500.0), "../../images/bunny.png"),
     ]);
 
     app.on_pre_render(move |shapes, _renderer| {

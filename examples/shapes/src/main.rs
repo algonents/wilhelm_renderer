@@ -78,7 +78,7 @@ fn main() {
     app.add_shapes(vec![
         // Text
         shape((160.0, 280.0),
-            ShapeKind::Text(Text::new("Hello, Wilhelm renderer!", "fonts/ArchitectsDaughter-Regular.ttf", 48)),
+            ShapeKind::Text(Text::new("Hello, Wilhelm renderer!", "../../fonts/ArchitectsDaughter-Regular.ttf", 48)),
             ShapeStyle::fill(Color::from_rgb(0.94, 0.91, 0.78)),
         ),
         // Line from (100, 200) to (300, 250)
@@ -161,8 +161,8 @@ fn main() {
             ),
         ),
         // Images
-        image_sized((200.0, 540.0), "images/smiley.png", 40.0, 40.0),
-        image((400.0, 500.0), "images/bunny.png"),
+        image_sized((200.0, 540.0), "../../images/smiley.png", 40.0, 40.0),
+        image((400.0, 500.0), "../../images/bunny.png"),
     ]);
 
     app.run();

@@ -18,7 +18,7 @@ use wilhelm_renderer::core::{
 };
 use wilhelm_renderer::graphics2d::shapes::{ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
 
-const FONT_PATH: &str = "fonts/DejaVuSans.ttf";
+const FONT_PATH: &str = "../../fonts/DejaVuSans.ttf";
 const FONT_SIZE: u32 = 11;
 const LABEL_OFFSET_X: f32 = 8.0;
 const LABEL_OFFSET_Y: f32 = -(FONT_SIZE as f32) / 2.0;
