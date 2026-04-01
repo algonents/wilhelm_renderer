@@ -177,20 +177,20 @@ No way for users to control quality vs performance tradeoff.
 ## 10. Summary: Priority Improvements
 
 ### Non-Breaking (additive):
-1. Add position getters: `x()`, `y()`, `position()`
-2. Add style mutators: `set_fill_color()`, `set_stroke_color()`, `set_stroke_width()`
-3. Add `Color::from_rgba()`
-4. Add `Origin` enum for configurable anchor points (default to current behavior)
-5. Fix Circle/Ellipse SVG export
-6. Use `MIN_STROKE_WIDTH` constant consistently
+- [x] Add position getters: `x()`, `y()`, `position()`
+- [ ] Add style mutators: `set_fill_color()`, `set_stroke_color()`, `set_stroke_width()`
+- [ ] Add `Color::from_rgba()`
+- [ ] Add `Origin` enum for configurable anchor points (default to current behavior)
+- [ ] Fix Circle/Ellipse SVG export
+- [ ] Use `MIN_STROKE_WIDTH` constant consistently
 
 ### Behavioral (needs migration consideration):
-7. Standardize anchor points for new primitives (always center)
-8. Document `(x, y)` semantics clearly per shape type
-9. Make instancing position-ignored contract explicit
+- [x] Standardize anchor points for new primitives — resolved by removing `(x, y)` from construction; all shapes now use `set_position()`
+- [ ] Document `(x, y)` semantics clearly per shape type
+- [ ] Make instancing position-ignored contract explicit
 
 ### Future (larger changes):
-10. Per-instance scale/rotation attributes
-11. Dynamic instance capacity
-12. Configurable geometry quality (segment counts)
-13. Alpha channel throughout rendering pipeline
+- [ ] Per-instance scale/rotation attributes
+- [ ] Dynamic instance capacity
+- [ ] Configurable geometry quality (segment counts)
+- [ ] Alpha channel throughout rendering pipeline
