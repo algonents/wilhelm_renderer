@@ -12,8 +12,8 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 ## Examples
 
 <p align="center">
-<a href="examples/shapes/src/main.rs"><img width="250" alt="shapes" title="Shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a>
-<a href="examples/bouncing_balls_instanced/src/main.rs"><img width="250" alt="bouncing_balls_instanced" title="Bouncing Balls (Instanced)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a>
+<a href="examples/shapes/src/main.rs"><img width="180" alt="shapes" title="Shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a>
+<a href="examples/bouncing_balls_instanced/src/main.rs"><img width="180" alt="bouncing_balls_instanced" title="Bouncing Balls (Instanced)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a>
 </p>
 
 All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
