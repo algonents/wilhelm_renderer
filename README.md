@@ -27,13 +27,13 @@ cargo build --workspace
 |---|---------|-------------|
 | | [triangle](examples/triangle/src/main.rs) | Low-level: custom shaders and geometry |
 | | [transforms](examples/transforms/src/main.rs) | Low-level: matrix transforms and animation |
-| <a href="examples/shapes/src/main.rs"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | [shapes](examples/shapes/src/main.rs) | All supported shape types |
+| <a href="examples/shapes"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | [shapes](examples/shapes/src/main.rs) | All supported shape types |
 | | [text](examples/text/src/main.rs) | Text rendering with FreeType |
 | | [rotations](examples/rotations/src/main.rs) | Per-shape rotation and animation |
 | | [shapes_scaled](examples/shapes_scaled/src/main.rs) | Shapes with scroll-to-zoom scaling |
 | | [bouncing_balls](examples/bouncing_balls/src/main.rs) | 50 animated balls with per-shape rendering |
 | | [instancing](examples/instancing/src/main.rs) | 6,000 instanced circles with per-instance color |
-| <a href="examples/bouncing_balls_instanced/src/main.rs"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | [bouncing_balls_instanced](examples/bouncing_balls_instanced/src/main.rs) | 10,000 animated balls with instanced rendering |
+| <a href="examples/bouncing_balls_instanced"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | [bouncing_balls_instanced](examples/bouncing_balls_instanced/src/main.rs) | 10,000 animated balls with instanced rendering |
 | | [waypoints](examples/waypoints/src/main.rs) | WGS84 coordinates with Camera2D projection |
 | | [waypoints_instanced](examples/waypoints_instanced/src/main.rs) | Instanced waypoint markers with Camera2D |
 
