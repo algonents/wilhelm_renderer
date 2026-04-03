@@ -1,117 +1,114 @@
 
 <img src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/wr_logo_v3.svg" alt="Wilhelm Renderer" width="340">
 
-wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. 
+wilhelm_renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings.
 Its goal is to provide a robust foundation for rendering 2D shapes and visualizing
 2D data and animations in real time.
 
-## 🚧 Status
+## Status
 
-⚠️ *APIs are still evolving — always use the latest release.*
+*APIs are still evolving — always use the latest release.*
 
-## ✨ Features
+## Examples
 
-Currently supported drawing primitives:
+<p align="center">
+<a href="examples/shapes/src/main.rs"><img width="250" alt="shapes" title="Shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a>
+<a href="examples/rotations/src/main.rs"><img width="250" alt="rotations" title="Rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a>
+<a href="examples/text/src/main.rs"><img width="250" alt="text" title="Text Rendering" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a>
+</p>
+<p align="center">
+<a href="examples/instancing/src/main.rs"><img width="250" alt="instancing" title="Instancing" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/instancing.png"></a>
+<a href="examples/bouncing_balls_instanced/src/main.rs"><img width="250" alt="bouncing_balls_instanced" title="Bouncing Balls (Instanced)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a>
+<a href="examples/waypoints/src/main.rs"><img width="250" alt="waypoints" title="Waypoints (WGS84 Projection)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a>
+</p>
 
-- Text rendering (using the FreeType library)
-- Points and MultiPoints
-- Lines (with thickness)
-- Polylines
-- Arcs
-- Rectangles and Rounded Rectangles
-- Triangles
-- Circles and Ellipses
-- Polygons
-- Images
-
-Other features:
-- All dependencies, including GLFW and FreeType, are bundled
-- Instanced rendering for high-performance scenes (10,000+ shapes)
-- Basic animation support
-- A simple Camera model for projecting between world and screen coordinates
-
-### 📦 Example usage
-
-All examples are provided in the **wilhelm_renderer** repository's `examples` [directory](https://github.com/algonents/wilhelm-renderer/tree/master/examples).
-
-You can build shapes and render them using the `ShapeRenderable` abstraction, as shown below:
-
-```rust
-extern crate wilhelm_renderer;
-
-use wilhelm_renderer::core::{App, Color, Window};
-use wilhelm_renderer::graphics2d::shapes::{Line, Rectangle, ShapeKind, ShapeRenderable, ShapeStyle, Text};
-
-fn main() {
-  let window = Window::new("Shapes", 800, 800, Color::from_rgb(0.07, 0.13, 0.17));
-  let mut app = App::new(window);
-
-  app.add_shapes(vec![
-    // Text
-    ShapeRenderable::from_shape(
-      160.0, 280.0,
-      ShapeKind::Text(Text::new("Hello, Wilhelm renderer!", "fonts/ArchitectsDaughter-Regular.ttf", 48)),
-      ShapeStyle::fill(Color::from_rgb(0.94, 0.91, 0.78)),
-    ),
-    // Line from (100, 200) to (300, 250)
-    ShapeRenderable::from_shape(
-      100.0, 200.0,
-      ShapeKind::Line(Line::new(300.0, 250.0)),
-      ShapeStyle::stroke(Color::from_rgb(0.0, 1.0, 0.0), 1.0),
-    ),
-    // Rectangle at (50, 50)
-    ShapeRenderable::from_shape(
-      50.0, 50.0,
-      ShapeKind::Rectangle(Rectangle::new(200.0, 80.0)),
-      ShapeStyle::fill(Color::from_rgb(0.2, 0.5, 0.9)),
-    ),
-  ]);
-
-  app.run();
-}
-```
-For a full example, see [shapes.rs](https://github.com/algonents/wilhelm-renderer/tree/master/examples/shapes.rs).
-
-![Shapes](https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/shapes.png)
-
-Additional examples:
-- `bouncing_balls_instanced.rs` – demonstrates instanced rendering with 10,000 animated balls
-  *(use `cargo run` inside the `examples/bouncing_balls` folder)*
-
-
-  ![Bouncing Balls](https://raw.githubusercontent.com/algonents/wilhelm-renderer/master/images/bouncing_balls_instanced.png)
-
-## 🛠️ IDE Setup (C++ Language Server)
-
-The C++ component uses CMake. To enable clangd support in Neovim (or any editor that uses clangd),
-generate a `compile_commands.json`:
+All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
 
 ```shell
-cmake -S cpp -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cd examples/shapes && cargo run
 ```
 
-For Neovim, clangd is configured via `nvim-lspconfig` with `--compile-commands-dir=build`, so it
-will automatically pick up the generated file from the `build/` directory.
+Build all examples at once to verify API compatibility:
 
-This only needs to be re-run when `cpp/CMakeLists.txt` changes. The `build/` directory is gitignored.
+```shell
+cargo build --workspace
+```
 
-## 🐞 Issues
+| Example | Description |
+|---------|-------------|
+| [shapes](examples/shapes/src/main.rs) | All supported shape types |
+| [shapes_scaled](examples/shapes_scaled/src/main.rs) | Shapes with scroll-to-zoom scaling |
+| [rotations](examples/rotations/src/main.rs) | Per-shape rotation and animation |
+| [text](examples/text/src/main.rs) | Text rendering with FreeType |
+| [instancing](examples/instancing/src/main.rs) | 6,000 instanced circles with per-instance color |
+| [bouncing_balls](examples/bouncing_balls/src/main.rs) | 50 animated balls with per-shape rendering |
+| [bouncing_balls_instanced](examples/bouncing_balls_instanced/src/main.rs) | 10,000 animated balls with instanced rendering |
+| [waypoints](examples/waypoints/src/main.rs) | WGS84 coordinates with Camera2D projection |
+| [waypoints_instanced](examples/waypoints_instanced/src/main.rs) | Instanced waypoint markers with Camera2D |
+| [triangle](examples/triangle/src/main.rs) | Low-level: custom shaders and geometry |
+| [transforms](examples/transforms/src/main.rs) | Low-level: matrix transforms and animation |
 
-You can report issues directly on [GitHub](https://github.com/algonents/wilhelm-renderer/issues).
+## Quick Start
 
-## 🔧 Installation
+```rust
+use wilhelm_renderer::core::{App, Color, Window};
+use wilhelm_renderer::graphics2d::shapes::{
+    Circle, Rectangle, ShapeKind, ShapeRenderable, ShapeStyle, Text,
+};
+
+fn main() {
+    let window = Window::new("Shapes", 800, 800, Color::from_rgb(0.07, 0.13, 0.17));
+    let mut app = App::new(window);
+
+    let shape = |pos: (f32, f32), kind: ShapeKind, style: ShapeStyle| {
+        let mut s = ShapeRenderable::from_shape(kind, style);
+        s.set_position(pos.0, pos.1);
+        s
+    };
+
+    app.add_shapes(vec![
+        shape((160.0, 280.0),
+            ShapeKind::Text(Text::new("Hello!", "fonts/DejaVuSans.ttf", 48)),
+            ShapeStyle::fill(Color::from_rgb(0.94, 0.91, 0.78)),
+        ),
+        shape((50.0, 50.0),
+            ShapeKind::Rectangle(Rectangle::new(200.0, 80.0)),
+            ShapeStyle::fill(Color::from_rgb(0.2, 0.5, 0.9)),
+        ),
+        shape((400.0, 400.0),
+            ShapeKind::Circle(Circle::new(50.0)),
+            ShapeStyle::fill(Color::from_rgb(0.0, 0.0, 1.0)),
+        ),
+    ]);
+
+    app.run();
+}
+```
+
+## Features
+
+**Shapes:** Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image, Text
+
+**Rendering:**
+- Instanced rendering for high-performance scenes (10,000+ shapes)
+- Per-shape rotation, scale, and position
+- Fill, stroke, and fill+stroke styles
+- MSAA 4x multisampling
+
+**Text:** FreeType-based rendering with font atlas caching and on-demand glyph loading
+
+**Projection:** Camera2D with world/screen coordinate conversion, pan, zoom, and WGS84/Mercator support
+
+**Bundled dependencies:** GLFW 3.4 and FreeType 2.13.2 are included — no external setup required
+
+## Installation
 
 ### Linux
 
-Ensure you have the necessary build tools installed (including a C/C++ compiler and CMake):
-
-```shell script
+```shell
 sudo apt-get install libgl1-mesa-dev
-sudo apt install mesa-utils
 sudo apt install libwayland-dev libxkbcommon-dev xorg-dev
 ```
-Add `wilhelm_renderer` as a dependency in your project. During the build process,
-Cargo will invoke CMake to build a static library containing the `wilhelm_renderer` FFI bindings to OpenGL.
 
 ### Windows
 
@@ -121,3 +118,23 @@ Ensure that Visual C++ Build Tools and CMake 3.5 or later are installed.
 
 Ensure that the Xcode command-line tools and CMake 3.5 or later are installed.
 
+Then add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+wilhelm_renderer = "0.8"
+```
+
+## IDE Setup (C++ Language Server)
+
+The C++ component uses CMake. To enable clangd support, generate a `compile_commands.json`:
+
+```shell
+cmake -S cpp -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+```
+
+The `build/` directory is gitignored. Re-run only when `cpp/CMakeLists.txt` changes.
+
+## Issues
+
+Report issues on [GitHub](https://github.com/algonents/wilhelm-renderer/issues).
