@@ -13,13 +13,7 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 
 <p align="center">
 <a href="examples/shapes/src/main.rs"><img width="250" alt="shapes" title="Shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a>
-<a href="examples/rotations/src/main.rs"><img width="250" alt="rotations" title="Rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a>
-<a href="examples/text/src/main.rs"><img width="250" alt="text" title="Text Rendering" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a>
-</p>
-<p align="center">
-<a href="examples/instancing/src/main.rs"><img width="250" alt="instancing" title="Instancing" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/instancing.png"></a>
 <a href="examples/bouncing_balls_instanced/src/main.rs"><img width="250" alt="bouncing_balls_instanced" title="Bouncing Balls (Instanced)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a>
-<a href="examples/waypoints/src/main.rs"><img width="250" alt="waypoints" title="Waypoints (WGS84 Projection)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a>
 </p>
 
 All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
