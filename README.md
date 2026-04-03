@@ -11,10 +11,13 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 
 ## Examples
 
-<p align="center">
-<a href="examples/shapes/src/main.rs"><img width="180" alt="shapes" title="Shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a>
-<a href="examples/bouncing_balls_instanced/src/main.rs"><img width="180" alt="bouncing_balls_instanced" title="Bouncing Balls (Instanced)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a>
-</p>
+<table>
+<tr>
+<td align="center"><a href="examples/shapes/src/main.rs"><img width="180" alt="shapes" title="Shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a><br><sub>Shapes</sub></td>
+<td align="center"><a href="examples/bouncing_balls_instanced/src/main.rs"><img width="180" alt="bouncing_balls_instanced" title="Bouncing Balls (Instanced)" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a><br><sub>Bouncing Balls (Instanced)</sub></td>
+<td align="center"></td>
+</tr>
+</table>
 
 All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
 
