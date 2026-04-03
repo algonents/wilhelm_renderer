@@ -1,5 +1,37 @@
 # TODO
 
+## CWP Radar Display Priorities
+
+Features driven by the primary use case: SkyTracker ATM radar display (Controller Working Position).
+
+### Primitives (see PRIMITIVES.md)
+- [ ] Dashed/dotted lines — predicted tracks, FIR boundaries, inactive routes
+- [ ] Arrow — velocity vectors, heading indicators, wind barbs
+- [ ] Sector / pie slice — radar coverage, airspace sectors
+- [ ] Ring / annulus — range rings, distance indicators
+- [ ] Leader lines — label-to-symbol connections
+- [ ] Thick polyline (variable width) — airways, route highlighting
+
+### Rendering Capabilities
+- [ ] Alpha/opacity — overlapping sectors, dimmed coasting tracks, semi-transparent regions
+- [ ] Style mutation — `set_fill_color()`, `set_stroke_color()`, `set_stroke_width()` without rebuilding shapes
+- [ ] Z-ordering / layers — map, routes, tracks, labels, selection (ROADMAP Phase 4)
+- [ ] Blend modes — additive blending for radar sweep effects
+
+### Interaction
+- [ ] Hit testing / picking — click to select track (ROADMAP Phase 3)
+- [ ] Mouse drag to pan (ROADMAP Phase 3)
+
+### API Improvements (see SHAPE_API_REVIEW.md)
+- [ ] `Color::from_rgba()` — alpha channel support
+- [ ] `Origin` enum — configurable anchor/pivot point per shape
+- [ ] Fix Circle/Ellipse SVG export positioning bug
+- [ ] Consistent `MIN_STROKE_WIDTH` usage
+
+---
+
+## Technical Debt
+
 Technical debt and improvement areas identified in code review.
 
 ## Resource Leaks

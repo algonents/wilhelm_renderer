@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-wilhelm-renderer is a minimalist 2D graphics engine written in Rust with native OpenGL bindings. It provides rendering of 2D shapes and visualization of 2-dimensional data in real time. The project uses OpenGL 3.3 Core Profile with GLFW 3.4 (bundled) for window management.
+wilhelm-renderer is a GPU-accelerated 2D display engine for real-time operational visualization, written in Rust with native OpenGL bindings. The primary use case is the SkyTracker ATM radar display (Controller Working Position), but the library is general-purpose for any application rendering real-time 2D positional data with geographic projection — radar displays, map overlays, fleet tracking, sensor visualization.
+
+The project uses OpenGL 3.3 Core Profile with GLFW 3.4 (bundled) for window management. Its peers are Qt Graphics View, Cairo/GDK, and OpenSceneGraph 2D — but leaner, Rust-native, and purpose-built for streaming positional data.
 
 ## Build Commands
 
