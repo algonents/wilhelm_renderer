@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.9.0] - 2026-04-05
+
+### Breaking Changes
+
+- **`ShapeRenderable::from_shape()` no longer takes `(x, y)` position parameters.** Shapes default to position (0, 0). Use `set_position(x, y)` after construction. This eliminates anchor point confusion where `(x, y)` meant different things per shape type.
+- **`ShapeRenderable::image()` and `image_with_size()` no longer take `(x, y)` parameters.** Same migration: call `set_position()` after construction.
+
+### Added
+
+- **Alpha/opacity support throughout the rendering pipeline.**
+  - `Color::from_rgba(r, g, b, a)` constructor for colors with transparency.
+  - `Color::from_hsl(h, s, l)` and `Color::from_hsla(h, s, l, a)` constructors for HSL color space.
+  - Fragment shaders (`shape.frag`, `point.frag`) now use `vec4` for `geometryColor` uniform, enabling per-shape alpha.
+  - Text shader correctly propagates alpha from color.
+  - Blending was already enabled; alpha now flows end-to-end.
+
+- **Style mutators for dynamic color changes without rebuilding shapes.**
+  - `set_fill_color(color)` — change fill color at any time.
+  - `set_stroke_color(color)` — change stroke color at any time.
+  - `fill_color()` and `stroke_color()` getters.
+
+- **Position getters:** `x()`, `y()`, `position()` on `ShapeRenderable`.
+
+- **All examples converted to standalone Cargo projects** in a workspace. `cargo build --workspace` builds the library and all examples, catching API breakage.
+
+- **New examples:**
+  - `alpha_transparency` — overlapping shapes, opacity gradients, semi-transparent text.
+  - `style_mutation` — dynamic color cycling, independent fill/stroke mutation, alpha breathing.
+
+- **Project documentation:**
+  - `PRIMITIVES.md` — consolidated primitives spec for maps, radar, and data visualization.
+  - `SHAPE_API_REVIEW.md` — API inconsistencies and improvement roadmap.
+
+### Removed
+
+- `RADAR PRIMITIVES.md` — superseded by `PRIMITIVES.md`.
+- `bouncing_balls_ws_client` and `bouncing_balls_ws_server` examples.
+- Unused shared shaders directory (`examples/shaders/`).
+
 ## [0.8.0] - 2026-02-07
 
 ### Added
