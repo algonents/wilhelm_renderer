@@ -3,23 +3,6 @@ use wilhelm_renderer::graphics2d::shapes::{
     Circle, Ellipse, Rectangle, ShapeKind, ShapeRenderable, ShapeStyle, Text,
 };
 
-fn hsl_to_rgb(h: f32, s: f32, l: f32) -> (f32, f32, f32) {
-    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
-    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-    let m = l - c / 2.0;
-
-    let (r, g, b) = match h as u32 {
-        0..=59 => (c, x, 0.0),
-        60..=119 => (x, c, 0.0),
-        120..=179 => (0.0, c, x),
-        180..=239 => (0.0, x, c),
-        240..=299 => (x, 0.0, c),
-        _ => (c, 0.0, x),
-    };
-
-    (r + m, g + m, b + m)
-}
-
 fn main() {
     let window = Window::new(
         "Style Mutation — Dynamic Color Changes",
@@ -176,8 +159,7 @@ fn main() {
         for i in 0..num_circles {
             let phase = i as f32 / num_circles as f32;
             let hue = ((t * 80.0 - phase * 360.0) % 360.0 + 360.0) % 360.0;
-            let (r, g, b) = hsl_to_rgb(hue, 0.8, 0.55);
-            shapes[circles_start + i].set_fill_color(Color::from_rgb(r, g, b));
+            shapes[circles_start + i].set_fill_color(Color::from_hsl(hue, 0.8, 0.55));
         }
 
         // Pulse rectangle: lerp between blue and orange
@@ -190,10 +172,8 @@ fn main() {
         // Dual rectangle: fill and stroke cycle independently
         let fill_hue = (t * 40.0 % 360.0).abs();
         let stroke_hue = ((t * 80.0 + 180.0) % 360.0).abs();
-        let (fr, fg, fb) = hsl_to_rgb(fill_hue, 0.7, 0.5);
-        let (sr, sg, sb) = hsl_to_rgb(stroke_hue, 0.9, 0.6);
-        shapes[dual_idx].set_fill_color(Color::from_rgb(fr, fg, fb));
-        shapes[dual_idx].set_stroke_color(Color::from_rgb(sr, sg, sb));
+        shapes[dual_idx].set_fill_color(Color::from_hsl(fill_hue, 0.7, 0.5));
+        shapes[dual_idx].set_stroke_color(Color::from_hsl(stroke_hue, 0.9, 0.6));
 
         // Fade ellipse: breathing alpha
         let alpha = (t * 1.5).sin() * 0.4 + 0.5; // oscillates 0.1..0.9
@@ -201,8 +181,7 @@ fn main() {
 
         // Text: cycle hue
         let text_hue = (t * 50.0 % 360.0).abs();
-        let (tr, tg, tb) = hsl_to_rgb(text_hue, 0.9, 0.65);
-        shapes[text_idx].set_fill_color(Color::from_rgb(tr, tg, tb));
+        shapes[text_idx].set_fill_color(Color::from_hsl(text_hue, 0.9, 0.65));
     });
 
     app.run();
