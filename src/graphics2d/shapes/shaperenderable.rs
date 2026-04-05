@@ -251,6 +251,24 @@ impl ShapeRenderable {
     pub fn rotation(&self) -> f32 {
         self.rotation
     }
+
+    pub fn set_fill_color(&mut self, color: Color) {
+        self.mesh.color = Some(color);
+    }
+
+    pub fn set_stroke_color(&mut self, color: Color) {
+        if let Some(stroke) = &mut self.stroke_mesh {
+            stroke.color = Some(color);
+        }
+    }
+
+    pub fn fill_color(&self) -> Option<Color> {
+        self.mesh.color
+    }
+
+    pub fn stroke_color(&self) -> Option<Color> {
+        self.stroke_mesh.as_ref().and_then(|s| s.color)
+    }
     pub fn from_shape(shape: ShapeKind, style: ShapeStyle) -> Self {
         match shape {
             ShapeKind::Point => {
