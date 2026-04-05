@@ -1,5 +1,5 @@
 #version 330 core
-uniform vec3 geometryColor;
+uniform vec4 geometryColor;
 in vec4 vInstanceColor;
 out vec4 FragColor;
 void main()
@@ -8,5 +8,5 @@ void main()
     if (vInstanceColor.a > 0.0)
         FragColor = vInstanceColor;
     else
-        FragColor = vec4(geometryColor, 1);
+        FragColor = geometryColor;
 }

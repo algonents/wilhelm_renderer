@@ -12,6 +12,10 @@ impl Color{
         Color {r, g, b, a:1.0}
     }
 
+    pub fn from_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Color { r, g, b, a }
+    }
+
     pub fn red_value(&self)->f32{
         self.r
     }
