@@ -31,6 +31,7 @@ cmake = "0.1.52"
 [workspace]
 members = [
     ".",
+    "examples/alpha_transparency",
     "examples/bouncing_balls",
     "examples/bouncing_balls_instanced",
     "examples/instancing",
