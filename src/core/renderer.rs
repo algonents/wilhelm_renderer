@@ -52,10 +52,10 @@ impl Renderer {
                 transform_loc,
                 1,
                 GLboolean::FALSE,
-                mesh.transform().to_cols_array().as_ptr(),
+                mesh.transform().as_ptr(),
             );
         }
-        
+
         let offset_loc = gl_get_uniform_location(mesh.shader.program(), "u_screen_offset");
         if offset_loc != -1 {
             let (ox, oy) = mesh.screen_offset();
@@ -117,7 +117,7 @@ impl Renderer {
         let transform_loc = gl_get_uniform_location(mesh.shader.program(), "u_Transform");
         if transform_loc != -1 {
             gl_uniform_matrix_4fv(
-                transform_loc, 1, GLboolean::FALSE, mesh.transform().to_cols_array().as_ptr(),
+                transform_loc, 1, GLboolean::FALSE, mesh.transform().as_ptr(),
             );
         }
 
