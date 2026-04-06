@@ -173,6 +173,7 @@ pub struct ShapeRenderable {
     y: f32,
     scale: f32,
     rotation: f32,
+    z_order: i32,
     mesh: Mesh,
     stroke_mesh: Option<Mesh>,
     shape: ShapeKind,
@@ -212,11 +213,11 @@ impl Renderable for ShapeRenderable {
 
 impl ShapeRenderable {
     fn new(mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: None, shape }
+        Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, z_order: 0, mesh, stroke_mesh: None, shape }
     }
 
     fn new_with_stroke(mesh: Mesh, stroke_mesh: Mesh, shape: ShapeKind) -> Self {
-        Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, mesh, stroke_mesh: Some(stroke_mesh), shape }
+        Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, z_order: 0, mesh, stroke_mesh: Some(stroke_mesh), shape }
     }
 
     pub fn set_position(&mut self, x: f32, y: f32) {
@@ -250,6 +251,14 @@ impl ShapeRenderable {
 
     pub fn rotation(&self) -> f32 {
         self.rotation
+    }
+
+    pub fn set_z_order(&mut self, z_order: i32) {
+        self.z_order = z_order;
+    }
+
+    pub fn z_order(&self) -> i32 {
+        self.z_order
     }
 
     pub fn set_fill_color(&mut self, color: Color) {

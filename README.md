@@ -90,6 +90,7 @@ cargo build --workspace
 | <a href="examples/bouncing_balls_instanced"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | bouncing_balls_instanced | 10,000 animated balls with instanced rendering |
 | <a href="examples/alpha_transparency"><img width="120" alt="alpha_transparency" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/alpha_transparency.png"></a> | alpha_transparency | Alpha blending and opacity control |
 | <a href="examples/style_mutation"><img width="120" alt="style_mutation" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/style_mutation.png"></a> | style_mutation | Dynamic color changes and HSL cycling |
+| <a href="examples/z_order"><img width="120" alt="z_order" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/z_order.png"></a> | z_order | Shape z-ordering independent of insertion order |
 | <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
 | <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
 

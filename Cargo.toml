@@ -46,4 +46,5 @@ members = [
     "examples/waypoints",
     "examples/waypoints_instanced",
     "examples/window",
+    "examples/z_order",
 ]
