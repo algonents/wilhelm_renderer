@@ -1,23 +1,22 @@
 extern crate wilhelm_renderer;
 
 use std::rc::Rc;
-use glam::{Mat4, Vec3};
-use wilhelm_renderer::core::{App, Attribute, Color, Geometry, Mesh, Shader, Window};
+use wilhelm_renderer::core::{App, Attribute, Color, Geometry, Mat4, Mesh, Shader, Window};
 use wilhelm_renderer::core::engine::opengl::{GL_TRIANGLES, GLfloat};
 
 const SCALE_FACTOR: f32 = 15.0;
 
 fn build_transform(viewport_width: f32, viewport_height: f32, time: f64) -> Mat4 {
-    let scale = Mat4::from_scale(Vec3::new(SCALE_FACTOR, -SCALE_FACTOR, SCALE_FACTOR));
+    let scale = Mat4::from_scale(SCALE_FACTOR, -SCALE_FACTOR, SCALE_FACTOR);
     let rotation = Mat4::from_rotation_z(2.0*time as f32);
 
     // Translate triangle to center of the screen
-    let translation = Mat4::from_translation(Vec3::new(
+    let translation = Mat4::from_translation(
         viewport_width / 2.0,
         viewport_height / 2.0,
         0.0,
-    ));
-    
+    );
+
     let projection = Mat4::orthographic_rh_gl(0.0, viewport_width, viewport_height, 0.0, 0.0, 1.0);
     projection * translation * rotation * scale
 }

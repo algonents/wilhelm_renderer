@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use glam::Mat4;
+use crate::core::math::Mat4;
 
 use crate::core::{geometry::Geometry, shader::Shader};
 use crate::core::color::Color;

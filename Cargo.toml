@@ -22,7 +22,6 @@ exclude = [
 ]
 
 [dependencies]
-glam = "0.30.4"
 image = "0.25.6"
 
 [build-dependencies]
