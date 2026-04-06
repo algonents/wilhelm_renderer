@@ -5,7 +5,7 @@ use glam::{Mat4, Vec3};
 use wilhelm_renderer::core::{App, Attribute, Color, Geometry, Mesh, Shader, Window};
 use wilhelm_renderer::core::engine::opengl::{GL_TRIANGLES, GLfloat};
 
-const SCALE_FACTOR: f32 = 2.0;
+const SCALE_FACTOR: f32 = 15.0;
 
 fn build_transform(viewport_width: f32, viewport_height: f32, time: f64) -> Mat4 {
     let scale = Mat4::from_scale(Vec3::new(SCALE_FACTOR, -SCALE_FACTOR, SCALE_FACTOR));

@@ -6,8 +6,8 @@ use wilhelm_renderer::graphics2d::shapes::{
 fn main() {
     let window = Window::new(
         "Style Mutation — Dynamic Color Changes",
-        900,
-        700,
+        800,
+        800,
         Color::from_rgb(0.94, 0.92, 0.84),
     );
     let mut app = App::new(window);
@@ -31,7 +31,7 @@ fn main() {
 
     // Row of circles that cycle through hues
     let circle_y = 150.0;
-    let num_circles = 7;
+    let num_circles = 6;
     let circle_r = 35.0;
     let spacing = 110.0;
     let start_x = 100.0;

@@ -8,8 +8,8 @@ fn main() {
     // Eggshell background
     let window = Window::new(
         "Alpha Transparency",
-        900,
-        700,
+        800,
+        800,
         Color::from_rgb(0.94, 0.92, 0.84),
     );
     let mut app = App::new(window);

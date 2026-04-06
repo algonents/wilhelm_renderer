@@ -3,13 +3,13 @@ extern crate wilhelm_renderer;
 use wilhelm_renderer::core::{App, Color, Vec2, Window};
 use wilhelm_renderer::graphics2d::shapes::{Circle, ShapeKind, ShapeRenderable, ShapeStyle};
 
-const WIDTH: i32 = 1600;
-const HEIGHT: i32 = 1000;
-const COLS: usize = 100;
-const ROWS: usize = 60;
+const WIDTH: i32 = 800;
+const HEIGHT: i32 = 600;
+const COLS: usize = 50;
+const ROWS: usize = 35;
 const SPACING: f32 = 15.0;
-const ORIGIN_X: f32 = 50.0;
-const ORIGIN_Y: f32 = 50.0;
+const ORIGIN_X: f32 = 30.0;
+const ORIGIN_Y: f32 = 30.0;
 const RADIUS: f32 = 3.0;
 
 // Darker-than-DeepSky: SteelBlue (0..1)
