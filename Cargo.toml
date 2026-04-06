@@ -34,6 +34,7 @@ members = [
     "examples/bouncing_balls",
     "examples/bouncing_balls_instanced",
     "examples/instancing",
+    "examples/polygons",
     "examples/keyboard",
     "examples/rotations",
     "examples/shapes",

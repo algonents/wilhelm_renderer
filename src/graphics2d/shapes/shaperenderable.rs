@@ -557,8 +557,9 @@ impl ShapeRenderable {
             .iter()
             .map(|(px, py)| (px - x0, py - y0))
             .collect();
+        let triangles = polygon.triangulate();
 
-        let geometry = ShapeRenderable::polygon_geometry(&rel_points);
+        let geometry = ShapeRenderable::polygon_geometry(&rel_points, &triangles);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Polygon(polygon));
@@ -960,16 +961,29 @@ impl ShapeRenderable {
         geometry
     }
 
-    fn polygon_geometry(points: &[(GLfloat, GLfloat)]) -> Geometry {
+    fn polygon_geometry(
+        points: &[(GLfloat, GLfloat)],
+        triangles: &[[usize; 3]],
+    ) -> Geometry {
         assert!(points.len() >= 3, "Polygon requires at least 3 points");
+        assert!(
+            !triangles.is_empty(),
+            "Polygon triangulation produced no triangles"
+        );
 
-        let mut vertices = Vec::with_capacity(points.len() * 2);
-        for &(x, y) in points {
-            vertices.extend_from_slice(&[x, y]);
+        // Expand the index list into a flat vertex buffer of triangles so the
+        // geometry can be drawn with GL_TRIANGLES (works for concave polygons,
+        // unlike GL_TRIANGLE_FAN which only renders convex shapes correctly).
+        let mut vertices = Vec::with_capacity(triangles.len() * 3 * 2);
+        for &[a, b, c] in triangles {
+            let (ax, ay) = points[a];
+            let (bx, by) = points[b];
+            let (cx, cy) = points[c];
+            vertices.extend_from_slice(&[ax, ay, bx, by, cx, cy]);
         }
 
         let values_per_vertex = 2;
-        let mut geometry = Geometry::new(GL_TRIANGLE_FAN); // Or TRIANGLE_FAN if filled
+        let mut geometry = Geometry::new(GL_TRIANGLES);
         geometry.add_buffer(&vertices, values_per_vertex);
         geometry.add_vertex_attribute(Attribute::new(0, 2, values_per_vertex as usize, 0));
         geometry
