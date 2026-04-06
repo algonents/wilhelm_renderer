@@ -2,7 +2,7 @@
 
 Text rendering using FreeType. Demonstrates multiple text sizes and colors with the DejaVu Sans font.
 
-![Text](../../images/text.png)
+<img src="../../images/text.png" width="50%">
 
 ```shell
 cd examples/text && cargo run
