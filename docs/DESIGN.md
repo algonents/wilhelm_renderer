@@ -59,6 +59,7 @@ Pure geometry data types: `Polygon`, `Circle`, `Line`, `Rectangle`, etc. No GPU,
 - Store geometry data (points, radii, dimensions)
 - Computational geometry methods (intersection, union, difference)
 - Hit testing (contains_point, distance_to_point)
+- Polygon triangulation (ear clipping) for concave polygon support
 - Geometric queries (area, perimeter, bounding box)
 
 **Design rules:**
