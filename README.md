@@ -9,35 +9,22 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 
 *APIs are still evolving — always use the latest release.*
 
-## Examples
+## Features
 
-All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
+**Shapes:** Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image, Text
 
-```shell
-cd examples/<example> && cargo run
-```
+**Rendering:**
+- Instanced rendering for high-performance scenes (10,000+ shapes)
+- Per-shape rotation, scale, and position
+- Fill, stroke, and fill+stroke styles
+- Alpha/opacity support
+- MSAA 4x multisampling
 
-Build all examples at once to verify API compatibility:
+**Text:** FreeType-based rendering with font atlas caching and on-demand glyph loading
 
-```shell
-cargo build --workspace
-```
+**Projection:** Camera2D with world/screen coordinate conversion, pan, zoom, and WGS84/Mercator support
 
-| | Example | Description |
-|---|---------|-------------|
-| <a href="examples/triangle"><img width="120" alt="triangle" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/triangle.png"></a> | triangle | Low-level: custom shaders and geometry |
-| <a href="examples/transforms"><img width="120" alt="transforms" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/transforms.png"></a> | transforms | Low-level: matrix transforms and animation |
-| <a href="examples/shapes"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes | All supported shape types |
-| <a href="examples/text"><img width="120" alt="text" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a> | text | Text rendering with FreeType |
-| <a href="examples/rotations"><img width="120" alt="rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a> | rotations | Per-shape rotation and animation |
-| <a href="examples/shapes_scaled"><img width="120" alt="shapes_scaled" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes_scaled | Shapes with scroll-to-zoom scaling |
-| <a href="examples/bouncing_balls"><img width="120" alt="bouncing_balls" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls.png"></a> | bouncing_balls | 200 animated balls with per-shape rendering |
-| <a href="examples/instancing"><img width="120" alt="instancing" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/instancing.png"></a> | instancing | 1,750 instanced circles with per-instance color |
-| <a href="examples/bouncing_balls_instanced"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | bouncing_balls_instanced | 10,000 animated balls with instanced rendering |
-| <a href="examples/alpha_transparency"><img width="120" alt="alpha_transparency" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/alpha_transparency.png"></a> | alpha_transparency | Alpha blending and opacity control |
-| <a href="examples/style_mutation"><img width="120" alt="style_mutation" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/style_mutation.png"></a> | style_mutation | Dynamic color changes and HSL cycling |
-| <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
-| <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
+**Bundled dependencies:** GLFW 3.4 and FreeType 2.13.2 are included — no external setup required
 
 ## Quick Start
 
@@ -76,21 +63,35 @@ fn main() {
 }
 ```
 
-## Features
+## Examples
 
-**Shapes:** Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image, Text
+All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
 
-**Rendering:**
-- Instanced rendering for high-performance scenes (10,000+ shapes)
-- Per-shape rotation, scale, and position
-- Fill, stroke, and fill+stroke styles
-- MSAA 4x multisampling
+```shell
+cd examples/<example> && cargo run
+```
 
-**Text:** FreeType-based rendering with font atlas caching and on-demand glyph loading
+Build all examples at once to verify API compatibility:
 
-**Projection:** Camera2D with world/screen coordinate conversion, pan, zoom, and WGS84/Mercator support
+```shell
+cargo build --workspace
+```
 
-**Bundled dependencies:** GLFW 3.4 and FreeType 2.13.2 are included — no external setup required
+| | Example | Description |
+|---|---------|-------------|
+| <a href="examples/triangle"><img width="120" alt="triangle" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/triangle.png"></a> | triangle | Low-level: custom shaders and geometry |
+| <a href="examples/transforms"><img width="120" alt="transforms" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/transforms.png"></a> | transforms | Low-level: matrix transforms and animation |
+| <a href="examples/shapes"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes | All supported shape types |
+| <a href="examples/text"><img width="120" alt="text" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a> | text | Text rendering with FreeType |
+| <a href="examples/rotations"><img width="120" alt="rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a> | rotations | Per-shape rotation and animation |
+| <a href="examples/shapes_scaled"><img width="120" alt="shapes_scaled" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes_scaled | Shapes with scroll-to-zoom scaling |
+| <a href="examples/bouncing_balls"><img width="120" alt="bouncing_balls" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls.png"></a> | bouncing_balls | 200 animated balls with per-shape rendering |
+| <a href="examples/instancing"><img width="120" alt="instancing" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/instancing.png"></a> | instancing | 1,750 instanced circles with per-instance color |
+| <a href="examples/bouncing_balls_instanced"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | bouncing_balls_instanced | 10,000 animated balls with instanced rendering |
+| <a href="examples/alpha_transparency"><img width="120" alt="alpha_transparency" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/alpha_transparency.png"></a> | alpha_transparency | Alpha blending and opacity control |
+| <a href="examples/style_mutation"><img width="120" alt="style_mutation" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/style_mutation.png"></a> | style_mutation | Dynamic color changes and HSL cycling |
+| <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
+| <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
 
 ## Installation
 
@@ -113,7 +114,7 @@ Then add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wilhelm_renderer = "0.8"
+wilhelm_renderer = "0.9"
 ```
 
 ## IDE Setup (C++ Language Server)
