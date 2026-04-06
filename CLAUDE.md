@@ -93,6 +93,6 @@ The high-level `ShapeRenderable` API uses 1 draw call per shape, which becomes a
 - **docs/design.md**: Architecture and key design decisions (Shape vs ShapeRenderable, dependency policy, rendering pipeline, client architecture).
 - **ROADMAP.md**: Planned library enhancements (text rendering, projections, interaction, layers, trails) to support SkyTracker and other visualization applications.
 - **TODO.md**: Technical debt and improvement areas including resource leaks, FFI issues, performance optimizations, and code style cleanup.
-- **PRIMITIVES.md**: Graphics primitives needed for 2D visualization (maps, radar, data viz), organized by priority (critical, important, nice to have).
-- **SHAPE_API_REVIEW.md**: API inconsistencies and improvement roadmap.
+- **docs/PRIMITIVES.md**: Graphics primitives needed for 2D visualization (maps, radar, data viz), organized by priority (critical, important, nice to have).
+- **docs/SHAPE_API_REVIEW.md**: API inconsistencies and improvement roadmap.
 - **CHANGELOG.md**: Record of API changes, improvements, and known limitations.
