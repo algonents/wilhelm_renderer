@@ -164,6 +164,9 @@ Same issue for Ellipse.
 
 Not inherently a problem, but affects future batching (Strategy B in ROADMAP) since GL modes can't be mixed in a single draw call.
 
+### Polygon only supports convex shapes
+`Polygon` uses `GL_TRIANGLE_FAN`, which only renders correctly for convex polygons. Concave polygons produce incorrect geometry because triangle fan assumes all triangles share a common vertex. Supporting concave polygons requires triangulation (e.g., ear clipping algorithm) before uploading vertices to the GPU.
+
 ### Hardcoded Quality Parameters
 - Circle: 64 segments (hardcoded)
 - Arc: 64 segments (hardcoded)
@@ -194,3 +197,4 @@ No way for users to control quality vs performance tradeoff.
 - [ ] Dynamic instance capacity
 - [ ] Configurable geometry quality (segment counts)
 - [x] Alpha channel throughout rendering pipeline — done in v0.9.0
+- [ ] Concave polygon support (requires triangulation, currently convex only via GL_TRIANGLE_FAN)
