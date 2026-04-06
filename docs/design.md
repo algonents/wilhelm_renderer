@@ -1,4 +1,4 @@
-# Architecture
+# Design
 
 ## Positioning
 
@@ -14,6 +14,13 @@ The library targets certification environments. Dependencies must be minimal and
 **Bundled:** GLFW 3.4 (window management), FreeType 2.13.2 (text rendering)
 
 Do not add external crates for computational geometry, data processing, or other functionality that can be implemented directly. Every new dependency increases the certification surface.
+
+## Design Principles
+
+1. **Easy client API**: Minimize ceremony and boilerplate for common operations. Hide internal complexity (e.g., `Rc<RefCell<>>`) behind simple methods.
+2. **Prevent unnecessary copies**: Prefer references over cloning. Only copy small, `Copy` types (e.g., `Camera2D`, `Vec2`, `Color`).
+3. **Optimized for performance**: Minimize per-frame overhead. Avoid allocations in hot paths. Prefer batched operations over per-item work.
+4. **Optimize on demand**: Performance optimizations are driven by actual bottlenecks, not speculation. The simple per-shape API is preferred until profiling proves it insufficient.
 
 ## Three-Layer Design
 
@@ -113,7 +120,43 @@ ShapeRenderable.render()
 
 **Color pipeline:** `Color { r, g, b, a }` → `mesh.color` → `geometryColor` uniform (vec4) → fragment shader.
 
-**Instancing:** Shapes can be instanced via `create_multiple_instances()`. Per-instance position and color are sent as vertex attributes (locations 1 and 2). The `u_screen_offset` uniform is forced to (0, 0) in instanced mode.
+**Transform order in shaders:** `rotate(u_rotation)` → `scale(u_scale)` → `translate(u_screen_offset + aInstanceXY)` → `project(u_Transform)`
+
+## Instancing
+
+Shapes can be instanced via `create_multiple_instances()`. Per-instance position and color are sent as vertex attributes. The `u_screen_offset` uniform is forced to (0, 0) in instanced mode.
+
+**Attribute locations used by the shape shader:**
+
+| Location | Name | Type | Usage |
+|----------|------|------|-------|
+| 0 | `aPos` | vec2 | Mesh-local vertex position |
+| 1 | `aInstanceXY` | vec2 | Per-instance screen offset (divisor=1) |
+| 2 | `aInstanceColor` | vec4 | Per-instance RGBA color (divisor=1) |
+
+**Instance color fallback:** The fragment shader checks `vInstanceColor.a > 0.0` to decide whether to use the per-instance color or fall back to the `geometryColor` uniform. When attrib 2 is disabled, OpenGL reads the generic value `(0,0,0,0)` (reset by `gl_vertex_attrib_4f` before each draw call), so alpha is 0 and the shader uses the uniform color.
+
+**Critical invariant:** Attrib 2 must only be enabled when color data is provided. `enable_instancing_xy` (position-only) must NOT enable attrib 2, or OpenGL reads garbage data causing random color bleeding. The color buffer is lazily initialized on first `update_instance_colors` call.
+
+## Rotations
+
+Shapes support per-shape rotation via `set_rotation(angle)` where angle is in radians.
+
+**Rotation pivot points by shape type:**
+
+| Shape | Geometry Origin | Rotation Pivot | Position Refers To |
+|-------|-----------------|----------------|-------------------|
+| Image | Centered | Center | Center |
+| Circle | Centered | Center | Center |
+| Ellipse | Centered | Center | Center |
+| Rectangle | (0,0) corner | Top-left | Top-left |
+| RoundedRectangle | (0,0) corner | Top-left | Top-left |
+| Triangle | User-defined | Depends on vertices | First vertex |
+| Polygon | Anchored to first vertex | First vertex | First vertex |
+| Polyline | Anchored to first vertex | First vertex | First vertex |
+| Line | Anchored to start point | Start point | Start point |
+
+**For center rotation with Rectangle/Polygon:** Use the low-level `Mesh` API with geometry vertices centered at origin, or define Triangle vertices centered at origin.
 
 ## Client Architecture
 
