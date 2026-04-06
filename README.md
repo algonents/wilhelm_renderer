@@ -14,7 +14,7 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
 
 ```shell
-cd examples/shapes && cargo run
+cd examples/<example> && cargo run
 ```
 
 Build all examples at once to verify API compatibility:
