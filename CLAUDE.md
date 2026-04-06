@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-wilhelm-renderer is a GPU-accelerated 2D display engine for real-time operational visualization, written in Rust with native OpenGL bindings. See `docs/design.md` for full architecture, design decisions, and dependency policy.
+wilhelm-renderer is a GPU-accelerated 2D display engine for real-time operational visualization, written in Rust with native OpenGL bindings. See `docs/DESIGN.md` for full architecture, design decisions, and dependency policy.
 
 ## Build Commands
 
@@ -90,7 +90,7 @@ The high-level `ShapeRenderable` API uses 1 draw call per shape, which becomes a
 
 ## Project Planning
 
-- **docs/design.md**: Architecture and key design decisions (Shape vs ShapeRenderable, dependency policy, rendering pipeline, client architecture).
+- **docs/DESIGN.md**: Architecture and key design decisions (Shape vs ShapeRenderable, dependency policy, rendering pipeline, client architecture).
 - **docs/ROADMAP.md**: Planned library enhancements (text rendering, projections, interaction, layers, trails) to support SkyTracker and other visualization applications.
 - **docs/TODO.md**: Technical debt and improvement areas including resource leaks, FFI issues, performance optimizations, and code style cleanup.
 - **docs/PRIMITIVES.md**: Graphics primitives needed for 2D visualization (maps, radar, data viz), organized by priority (critical, important, nice to have).
