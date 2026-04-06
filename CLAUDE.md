@@ -82,10 +82,6 @@ The high-level `ShapeRenderable` API uses 1 draw call per shape, which becomes a
 - `cpp/glrenderer.cpp`: C++ wrapper functions called via FFI
 - `build.rs`: CMake integration and platform-specific linking
 
-## Supported Shape Types
-
-Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image, Text
-
 ## Platform Notes
 
 - Supports both Wayland and X11 on Linux (GLFW selects backend at runtime)

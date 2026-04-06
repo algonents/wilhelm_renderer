@@ -22,6 +22,10 @@ Do not add external crates for computational geometry, data processing, or other
 3. **Optimized for performance**: Minimize per-frame overhead. Avoid allocations in hot paths. Prefer batched operations over per-item work.
 4. **Optimize on demand**: Performance optimizations are driven by actual bottlenecks, not speculation. The simple per-shape API is preferred until profiling proves it insufficient.
 
+## Supported Shape Types
+
+Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image, Text
+
 ## Three-Layer Design
 
 ```
