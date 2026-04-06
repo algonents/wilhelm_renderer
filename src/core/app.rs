@@ -157,6 +157,8 @@ impl<'a> App<'a> {
                 cb(&mut self.shapes, &self.renderer);
             }
 
+            self.shapes.sort_by_key(|s| s.z_order());
+
             for shape in &mut self.shapes {
                 shape.render(&self.renderer);
             }
