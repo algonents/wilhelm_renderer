@@ -178,8 +178,8 @@ No way for users to control quality vs performance tradeoff.
 
 ### Non-Breaking (additive):
 - [x] Add position getters: `x()`, `y()`, `position()`
-- [ ] Add style mutators: `set_fill_color()`, `set_stroke_color()`, `set_stroke_width()`
-- [ ] Add `Color::from_rgba()`
+- [x] Add style mutators: `set_fill_color()`, `set_stroke_color()` — done (stroke_width requires geometry rebuild, not added)
+- [x] Add `Color::from_rgba()` — done, plus `Color::from_hsl()` and `Color::from_hsla()`
 - [ ] Add `Origin` enum for configurable anchor points (default to current behavior)
 - [ ] Fix Circle/Ellipse SVG export
 - [ ] Use `MIN_STROKE_WIDTH` constant consistently
@@ -193,4 +193,4 @@ No way for users to control quality vs performance tradeoff.
 - [ ] Per-instance scale/rotation attributes
 - [ ] Dynamic instance capacity
 - [ ] Configurable geometry quality (segment counts)
-- [ ] Alpha channel throughout rendering pipeline
+- [x] Alpha channel throughout rendering pipeline — done in v0.9.0
