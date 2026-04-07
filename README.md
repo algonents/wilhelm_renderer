@@ -26,6 +26,17 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 
 **Bundled dependencies:** GLFW 3.4 and FreeType 2.13.2 are included — no external setup required
 
+## Crate structure
+
+wilhelm_renderer is published as two crates:
+
+- **[`wilhelm_renderer`](https://crates.io/crates/wilhelm_renderer)** — the safe Rust API (shapes, camera, text, rendering loop). This is what you depend on.
+- **[`wilhelm_renderer_sys`](https://crates.io/crates/wilhelm_renderer_sys)** — raw `extern "C"` bindings, the bundled GLFW 3.4 / FreeType 2.13.2 sources, and the CMake build machinery. Pulled in automatically as a transitive dependency; you don't need to add it yourself.
+
+This split follows the standard Rust ecosystem convention for crates that bundle C/C++ code (e.g., `openssl` / `openssl-sys`, `rusqlite` / `libsqlite3-sys`). The upper crate stays small and pure Rust, while the native plumbing lives in the `-sys` crate where Rust users expect to find it.
+
+Downstream users who need direct FFI access — for custom OpenGL calls that aren't covered by the safe API — can add `wilhelm_renderer_sys` as an explicit dependency and reach the raw `extern "C"` functions directly. This is an opt-in that requires its own `Cargo.toml` entry; the safe wrapper layer does not leak these functions.
+
 ## Quick Start
 
 ```rust
@@ -115,18 +126,18 @@ Then add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wilhelm_renderer = "0.9"
+wilhelm_renderer = "0.10"
 ```
 
 ## IDE Setup (C++ Language Server)
 
-The C++ component uses CMake. To enable clangd support, generate a `compile_commands.json`:
+The C++ component uses CMake and lives in `wilhelm_renderer_sys/cpp/`. To enable clangd support, generate a `compile_commands.json`:
 
 ```shell
-cmake -S cpp -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake -S wilhelm_renderer_sys/cpp -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ```
 
-The `build/` directory is gitignored. Re-run only when `cpp/CMakeLists.txt` changes.
+The `build/` directory is gitignored. Re-run only when `wilhelm_renderer_sys/cpp/CMakeLists.txt` changes.
 
 ## Issues
 
