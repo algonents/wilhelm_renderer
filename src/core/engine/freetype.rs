@@ -112,8 +112,8 @@ mod tests {
     fn test_load_font_and_glyph() {
         let library = init_freetype().expect("Failed to initialize FreeType");
 
-        // Use bundled font
-        let font_path = "fonts/DejaVuSans.ttf";
+        // Use the smallest bundled font so the published tarball stays lean.
+        let font_path = "fonts/ArchitectsDaughter-Regular.ttf";
         let face = new_face(library, font_path, 0).expect("Failed to load font");
 
         set_pixel_sizes(face, 0, 48).expect("Failed to set pixel size");

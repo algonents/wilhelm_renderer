@@ -19,6 +19,9 @@ exclude = [
     "ROADMAP.md",
     "TODO.md",
     "examples/",
+    # DejaVuSans is only used by examples (which are already excluded).
+    # The lib test uses the much smaller ArchitectsDaughter font.
+    "fonts/DejaVuSans.ttf",
 ]
 
 [dependencies]
