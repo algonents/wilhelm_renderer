@@ -33,10 +33,6 @@ wilhelm_renderer is published as two crates:
 - **[`wilhelm_renderer`](https://crates.io/crates/wilhelm_renderer)** — the safe Rust API (shapes, camera, text, rendering loop). This is what you depend on.
 - **[`wilhelm_renderer_sys`](https://crates.io/crates/wilhelm_renderer_sys)** — raw `extern "C"` bindings, the bundled GLFW 3.4 / FreeType 2.13.2 sources, and the CMake build machinery. Pulled in automatically as a transitive dependency; you don't need to add it yourself.
 
-This split follows the standard Rust ecosystem convention for crates that bundle C/C++ code (e.g., `openssl` / `openssl-sys`, `rusqlite` / `libsqlite3-sys`). The upper crate stays small and pure Rust, while the native plumbing lives in the `-sys` crate where Rust users expect to find it.
-
-Downstream users who need direct FFI access — for custom OpenGL calls that aren't covered by the safe API — can add `wilhelm_renderer_sys` as an explicit dependency and reach the raw `extern "C"` functions directly. This is an opt-in that requires its own `Cargo.toml` entry; the safe wrapper layer does not leak these functions.
-
 ## Quick Start
 
 ```rust
