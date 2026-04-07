@@ -8,8 +8,8 @@ license = "MIT"
 description = "A minimalist 2D graphics engine"
 repository = "https://github.com/algonents/wilhelm-renderer"
 readme = "README.md"
-keywords = ["opengl", "visualization", "graphics2D"]
-categories = ["graphics", "rendering::graphics-api"]
+keywords = ["opengl", "visualization", "2d", "graphics", "renderer"]
+categories = ["visualization", "rendering::engine", "graphics"]
 exclude = [
     ".idea/",
     "images/",
