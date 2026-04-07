@@ -1,6 +1,6 @@
 [package]
 name = "wilhelm_renderer"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 authors = ["Anwar Ludin <anwar.ludin@algonents.com>"]
 license = "MIT"
@@ -23,7 +23,7 @@ exclude = [
 
 [dependencies]
 image = "0.25.6"
-wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.9.0" }
+wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.10.0" }
 
 [workspace]
 members = [
