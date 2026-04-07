@@ -28,10 +28,7 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 
 ## Crate structure
 
-wilhelm_renderer is published as two crates:
-
-- **[`wilhelm_renderer`](https://crates.io/crates/wilhelm_renderer)** — the safe Rust API (shapes, camera, text, rendering loop). This is what you depend on.
-- **[`wilhelm_renderer_sys`](https://crates.io/crates/wilhelm_renderer_sys)** — raw `extern "C"` bindings, the bundled GLFW 3.4 / FreeType 2.13.2 sources, and the CMake build machinery. Pulled in automatically as a transitive dependency; you don't need to add it yourself.
+This crate provides the safe Rust API — shapes, camera, text, and the rendering loop. The companion [`wilhelm_renderer_sys`](https://crates.io/crates/wilhelm_renderer_sys) crate contains the raw `extern "C"` bindings and the bundled GLFW 3.4 / FreeType 2.13.2 sources; Cargo pulls it in automatically as a transitive dependency.
 
 ## Quick Start
 
