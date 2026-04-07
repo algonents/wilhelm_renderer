@@ -23,13 +23,12 @@ exclude = [
 
 [dependencies]
 image = "0.25.6"
-
-[build-dependencies]
-cmake = "0.1.52"
+wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.9.0" }
 
 [workspace]
 members = [
     ".",
+    "wilhelm_renderer_sys",
     "examples/alpha_transparency",
     "examples/bouncing_balls",
     "examples/bouncing_balls_instanced",

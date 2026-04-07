@@ -1,282 +1,141 @@
-use std::ffi::{CString, c_char, c_float, c_int, c_long, c_uint, c_void};
+//! Safe Rust wrappers around the raw OpenGL FFI exposed by
+//! `wilhelm_renderer_sys`.
+//!
+//! The raw `extern "C"` functions are imported privately via the `sys`
+//! alias and are **not** re-exported — client code cannot reach them
+//! through this module. Clients that need direct FFI access must depend
+//! on `wilhelm_renderer_sys` explicitly.
 
-pub type GLenum = c_uint;
-pub type GLsizei = c_int;
-pub type GLsizeiptr = c_long;
-pub type GLchar = c_char;
-pub type GLint = c_int;
-pub type GLuint = c_uint;
-pub type GLfloat = c_float;
-pub type GLvoid = c_void;
+use std::ffi::{CString, c_char};
 
-/// A 2D vector with guaranteed C-compatible memory layout.
-/// Used for uploading vertex data to OpenGL.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-#[repr(C)]
-pub struct Vec2 {
-    pub x: f32,
-    pub y: f32,
-}
+// Re-export the public OpenGL types and constants as part of our API.
+pub use wilhelm_renderer_sys::opengl::{
+    GL_ARRAY_BUFFER, GL_BLEND, GL_CLAMP_TO_EDGE, GL_COMPILE_STATUS, GL_CULL_FACE, GL_DYNAMIC_DRAW,
+    GL_ELEMENT_ARRAY_BUFFER, GL_FLOAT, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_LINEAR,
+    GL_LINEAR_MIPMAP_LINEAR, GL_LINES, GL_LINE_STRIP, GL_MULTISAMPLE, GL_ONE_MINUS_SRC_ALPHA,
+    GL_POINTS, GL_RED, GL_REPEAT, GL_RGB, GL_RGBA, GL_SAMPLES, GL_SRC_ALPHA, GL_STATIC_DRAW,
+    GL_TEXTURE0, GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_TEXTURE_MIN_FILTER, GL_TEXTURE_WRAP_S,
+    GL_TEXTURE_WRAP_T, GL_TRIANGLES, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_UNPACK_ALIGNMENT,
+    GL_UNSIGNED_BYTE, GL_UNSIGNED_INT, GL_VERTEX_SHADER, GL_VIEWPORT, GLboolean, GLchar, GLenum,
+    GLfloat, GLint, GLsizei, GLsizeiptr, GLuint, GLvoid, Vec2,
+};
 
-impl Vec2 {
-    pub fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
-}
-
-impl From<(f32, f32)> for Vec2 {
-    fn from((x, y): (f32, f32)) -> Self {
-        Self { x, y }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
-pub enum GLboolean {
-    FALSE = 0,
-    TRUE = 1,
-}
-
-pub const GL_ARRAY_BUFFER: u32 = 0x8892;
-pub const GL_ELEMENT_ARRAY_BUFFER: u32 = 0x8893;
-
-pub const GL_FRAGMENT_SHADER: u32 = 0x8B30;
-pub const GL_VERTEX_SHADER: u32 = 0x8B31;
-pub const GL_GEOMETRY_SHADER: u32 = 0x8DD9;
-pub const GL_COMPILE_STATUS: u32 = 0x8B81;
-
-pub const GL_STATIC_DRAW: u32 = 0x88E4;
-pub const GL_DYNAMIC_DRAW: u32 = 0x88E8;
-pub const GL_FLOAT: u32 = 0x1406;
-pub const GL_UNSIGNED_INT: u32 = 0x1405;
-pub const GL_UNSIGNED_BYTE: u32 = 0x1401;
-pub const GL_POINTS: u32 = 0x0000;
-pub const GL_LINES: u32 = 0x0001;
-pub const GL_LINE_STRIP: u32 = 0x0003;
-pub const GL_TRIANGLES: u32 = 0x0004;
-pub const  GL_TRIANGLE_FAN :u32=0x0006;
-pub const  GL_TRIANGLE_STRIP:u32=0x0005;
-pub const GL_VIEWPORT: u32 = 0x0BA2;
-pub const GL_TEXTURE_2D: u32 = 0x0DE1;
-pub const GL_RED: u32 = 0x1903;
-pub const GL_CULL_FACE: u32 = 0x0B44;
-pub const GL_BLEND: u32 = 0x0BE2;
-pub const GL_SRC_ALPHA: u32 = 0x0302;
-pub const GL_ONE_MINUS_SRC_ALPHA: u32 = 0x0303;
-pub const GL_TEXTURE0: u32 = 0x84C0;
-
-pub const GL_TEXTURE_WRAP_S: u32 = 0x2802;
-pub const GL_TEXTURE_WRAP_T: u32 = 0x2803;
-pub const GL_REPEAT: GLint = 0x2901;
-pub const GL_CLAMP_TO_EDGE: GLint = 0x812F;
-pub const GL_TEXTURE_MAG_FILTER: u32 = 0x2800;
-pub const GL_TEXTURE_MIN_FILTER: u32 = 0x2801;
-pub const GL_LINEAR: GLint = 0x2601;
-pub const GL_LINEAR_MIPMAP_LINEAR: GLint = 0x2703;
-pub const GL_RGB: GLint = 0x1907;
-pub const GL_RGBA: GLint = 0x1908;
-pub const GL_MULTISAMPLE: GLuint = 0x809D;
-pub const GL_SAMPLES: GLuint = 0x80A9;
-pub const GL_UNPACK_ALIGNMENT: GLenum = 0x0CF5;
-
-unsafe extern "C" {
-    fn _glClearColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
-    fn _glViewPort(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
-    fn _glGetIntegerv(pname: GLenum, data: *mut GLvoid);
-    fn _glCreateShader(shaderType: GLenum) -> GLuint;
-    fn _glShaderSource(shader: GLuint, source: *const c_char);
-    fn _glCompileShader(shader: GLuint);
-    fn _glDeleteShader(shader: GLuint);
-    fn _glGetShaderiv(shader: GLuint, pname: GLenum, params: *mut GLint);
-    fn _glCreateProgram() -> GLuint;
-    fn _glAttachShader(program: GLuint, shader: GLuint);
-    fn _glLinkProgram(program: GLuint);
-    fn _glDeleteProgram(program: GLuint);
-    fn _glUseProgram(program: GLuint);
-    fn _glGenBuffer() -> GLuint;
-    fn _glGenBuffers(n: GLsizei, buffers: *mut GLuint);
-    fn _glBindBuffer(target: GLenum, buffer: GLuint);
-    fn _glBufferData(target: GLenum, size: GLsizeiptr, data: *const GLvoid, usage: GLenum);
-    fn _glBufferSubData(target: GLenum, offset: GLsizeiptr, size: GLsizeiptr, data: *const GLvoid);
-    fn _glDeleteBuffer(buffer: GLuint);
-    fn _glGenVertexArray() -> GLuint;
-    fn _glDeleteVertexArray(vao: GLuint);
-    fn _glBindVertexArray(VAO: GLuint);
-    fn _glVertexAttribPointer(
-        index: GLuint,
-        size: GLint,
-        dataType: GLenum,
-        normalize: GLboolean,
-        stride: GLsizei,
-        offset: GLsizei,
-    );
-    fn _glActiveTexture(unit: GLenum);
-    fn _glGenTexture() -> GLuint;
-    fn _glBindTexture(target: GLenum, texture: GLuint);
-    fn _glTexParameteri(target: GLenum, pname: GLenum, param: GLint);
-    fn _glGenerateMipmap(target: GLenum);
-    fn _glTexImage2D(
-        target: GLenum,
-        level: GLint,
-        internalformat: GLint,
-        width: GLsizei,
-        height: GLsizei,
-        border: GLint,
-        format: GLenum,
-        dataType: GLenum,
-        data: *const GLvoid,
-    );
-    fn _glTexSubImage2D(
-        target: GLenum,
-        level: GLint,
-        xoffset: GLint,
-        yoffset: GLint,
-        width: GLsizei,
-        height: GLsizei,
-        format: GLenum,
-        dataType: GLenum,
-        data: *const GLvoid,
-    );
-    fn _glPixelStorei(pname: GLenum, param: GLint);
-    fn _glDeleteTexture(texture: GLuint);
-    fn _glEnableVertexAttribArray(index: GLuint);
-    fn _glDrawArrays(mode: GLenum, first: GLint, count: GLsizei);
-    fn _glDrawArraysInstanced(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei);
-    fn _glVertexAttribDivisor(index: GLuint, divisor: GLuint);
-    fn _glVertexAttrib4f(index: GLuint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat);
-    fn _glDrawElements(mode: GLenum, count: GLsizei, element_type: GLenum, offset: GLuint);
-
-    fn _glGetUniformLocation(program: GLuint, name: *const GLchar) -> GLint;
-    fn _glUniform1f(location: GLint, v0: GLfloat);
-    fn _glUniform2f(location: GLint, v0: GLfloat, v1: GLfloat);
-    fn _glUniform3f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat);
-    fn _glUniform4f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat);
-    fn _glUniformMatrix4fv(
-        location: GLint,
-        count: GLsizei,
-        transpose: GLboolean,
-        value: *const GLfloat,
-    );
-    fn _glPointSize(size: GLfloat);
-    fn _glEnable(cap: GLenum);
-    fn _glBlendFunc(sfactor: GLenum, dfactor: GLenum);
-}
+// Private alias for the raw FFI. Not re-exported.
+use wilhelm_renderer_sys::opengl as sys;
 
 pub fn gl_clear_color(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat) {
-    unsafe { _glClearColor(red, green, blue, alpha) }
+    unsafe { sys::_glClearColor(red, green, blue, alpha) }
 }
 
 pub fn gl_viewport(x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
     unsafe {
-        _glViewPort(x, y, width, height);
+        sys::_glViewPort(x, y, width, height);
     }
 }
 
 pub fn gl_get_integerv(pname: GLenum, data: *mut GLvoid) {
     unsafe {
-        _glGetIntegerv(pname, data);
+        sys::_glGetIntegerv(pname, data);
     }
 }
 
 pub fn gl_create_fragment_shader() -> GLuint {
-    unsafe { _glCreateShader(GL_FRAGMENT_SHADER) }
+    unsafe { sys::_glCreateShader(GL_FRAGMENT_SHADER) }
 }
 
 pub fn gl_create_vertex_shader() -> GLuint {
-    unsafe { _glCreateShader(GL_VERTEX_SHADER) }
+    unsafe { sys::_glCreateShader(GL_VERTEX_SHADER) }
 }
 
 pub fn gl_create_geometry_shader() -> GLuint {
-    unsafe { _glCreateShader(GL_GEOMETRY_SHADER) }
+    unsafe { sys::_glCreateShader(GL_GEOMETRY_SHADER) }
 }
 
 pub fn gl_shader_source(shader: GLuint, source: &str) {
     let c_string = CString::new(source).expect("CString::new failed");
-    unsafe { _glShaderSource(shader, c_string.as_ptr()) }
+    unsafe { sys::_glShaderSource(shader, c_string.as_ptr()) }
 }
 
 pub fn gl_compile_shader(shader: GLuint) {
-    unsafe { _glCompileShader(shader) }
+    unsafe { sys::_glCompileShader(shader) }
 }
 
 pub fn gl_delete_shader(shader: GLuint) {
-    unsafe { _glDeleteShader(shader) }
+    unsafe { sys::_glDeleteShader(shader) }
 }
 
 pub fn gl_get_shaderiv(shader: GLuint, pname: GLenum, params: &mut GLint) {
-    unsafe { _glGetShaderiv(shader, pname, params as *mut GLint) }
+    unsafe { sys::_glGetShaderiv(shader, pname, params as *mut GLint) }
 }
 
 pub fn gl_create_program() -> GLuint {
-    unsafe { _glCreateProgram() }
+    unsafe { sys::_glCreateProgram() }
 }
 
 pub fn gl_attach_shader(program: GLuint, shader: GLuint) {
-    unsafe { _glAttachShader(program, shader) }
+    unsafe { sys::_glAttachShader(program, shader) }
 }
 
 pub fn gl_link_program(program: GLuint) {
     unsafe {
-        _glLinkProgram(program);
+        sys::_glLinkProgram(program);
     }
 }
 
 pub fn gl_delete_program(program: GLuint) {
-    unsafe { _glDeleteProgram(program) }
+    unsafe { sys::_glDeleteProgram(program) }
 }
 
 pub fn gl_use_program(program: GLuint) {
     unsafe {
-        _glUseProgram(program);
+        sys::_glUseProgram(program);
     }
 }
 
 pub fn gl_gen_buffer() -> GLuint {
-    unsafe { _glGenBuffer() }
+    unsafe { sys::_glGenBuffer() }
 }
-pub fn gl_delete_buffer(buffer: GLuint){
-    unsafe{
-        _glDeleteBuffer(buffer)
-    }
+pub fn gl_delete_buffer(buffer: GLuint) {
+    unsafe { sys::_glDeleteBuffer(buffer) }
 }
 
 pub fn gl_gen_buffers(buffers: &mut Vec<GLuint>) {
     unsafe {
-        _glGenBuffers(buffers.len().try_into().unwrap(), buffers.as_mut_ptr());
+        sys::_glGenBuffers(buffers.len().try_into().unwrap(), buffers.as_mut_ptr());
     }
 }
 
 pub fn gl_bind_buffer(target: GLuint, buffer: GLuint) {
     unsafe {
-        _glBindBuffer(target, buffer);
+        sys::_glBindBuffer(target, buffer);
     }
 }
 
 pub fn gl_gen_texture() -> GLuint {
-    unsafe { _glGenTexture() }
+    unsafe { sys::_glGenTexture() }
 }
 
 pub fn gl_bind_texture(target: GLenum, texture: GLuint) {
-    unsafe { _glBindTexture(target, texture) }
+    unsafe { sys::_glBindTexture(target, texture) }
 }
 
 pub fn gl_gen_vertex_array() -> GLuint {
-    unsafe { _glGenVertexArray() }
+    unsafe { sys::_glGenVertexArray() }
 }
 
 pub fn gl_delete_vertex_array(vao: GLuint) {
-    unsafe { _glDeleteVertexArray(vao) }
+    unsafe { sys::_glDeleteVertexArray(vao) }
 }
 
 pub fn gl_bind_vertex_array(array: GLuint) {
     unsafe {
-        _glBindVertexArray(array);
+        sys::_glBindVertexArray(array);
     }
 }
 
 pub fn gl_buffer_data<T>(target: GLenum, data: &[T]) {
     unsafe {
-        _glBufferData(
+        sys::_glBufferData(
             target,
             std::mem::size_of_val(data) as GLsizeiptr,
             data.as_ptr() as *const GLvoid,
@@ -288,7 +147,7 @@ pub fn gl_buffer_data<T>(target: GLenum, data: &[T]) {
 // 1) Exact orphan/allocate helper — NULL data pointer
 pub fn gl_buffer_data_empty_with_usage(target: GLenum, size_bytes: GLsizeiptr, usage: GLenum) {
     unsafe {
-        _glBufferData(target, size_bytes, std::ptr::null::<GLvoid>(), usage);
+        sys::_glBufferData(target, size_bytes, std::ptr::null::<GLvoid>(), usage);
     }
 }
 
@@ -303,11 +162,9 @@ pub fn gl_buffer_data_empty_vec2(target: GLenum, count_instances: usize) {
     gl_buffer_data_empty(target, size_bytes);
 }
 
-
-
 pub fn gl_buffer_sub_data<T>(target: GLenum, offset: GLsizeiptr, data: &[T]) {
     unsafe {
-        _glBufferSubData(
+        sys::_glBufferSubData(
             target,
             offset,
             std::mem::size_of_val(data) as GLsizeiptr,
@@ -321,13 +178,13 @@ pub fn gl_buffer_sub_data_vec2(target: GLenum, xy: &[Vec2]) {
     let ptr = xy.as_ptr() as *const GLvoid;
     let size_bytes = (xy.len() * std::mem::size_of::<Vec2>()) as GLsizeiptr;
     unsafe {
-        _glBufferSubData(target, 0 as GLsizeiptr, size_bytes, ptr);
+        sys::_glBufferSubData(target, 0 as GLsizeiptr, size_bytes, ptr);
     }
 }
 
 pub fn gl_enable_vertex_attrib_array(index: GLuint) {
     unsafe {
-        _glEnableVertexAttribArray(index);
+        sys::_glEnableVertexAttribArray(index);
     }
 }
 
@@ -339,13 +196,13 @@ pub fn gl_vertex_attrib_pointer_float(
     offset: GLsizei,
 ) {
     unsafe {
-        _glVertexAttribPointer(index, size, GL_FLOAT, normalize, stride, offset);
+        sys::_glVertexAttribPointer(index, size, GL_FLOAT, normalize, stride, offset);
     }
 }
 
 pub fn gl_draw_arrays(mode: GLenum, first: GLint, count: GLsizei) {
     unsafe {
-        _glDrawArrays(mode, first, count);
+        sys::_glDrawArrays(mode, first, count);
     }
 }
 
@@ -356,24 +213,24 @@ pub fn gl_draw_arrays_instanced(
     instance_count: GLsizei,
 ) {
     unsafe {
-        _glDrawArraysInstanced(mode, first, count, instance_count);
+        sys::_glDrawArraysInstanced(mode, first, count, instance_count);
     }
 }
 
 pub fn gl_vertex_attrib_divisor(index: GLuint, divisor: GLuint) {
     unsafe {
-        _glVertexAttribDivisor(index, divisor);
+        sys::_glVertexAttribDivisor(index, divisor);
     }
 }
 
 pub fn gl_vertex_attrib_4f(index: GLuint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat) {
     unsafe {
-        _glVertexAttrib4f(index, v0, v1, v2, v3);
+        sys::_glVertexAttrib4f(index, v0, v1, v2, v3);
     }
 }
 
 pub fn gl_draw_elements(mode: GLenum, count: GLsizei, element_type: GLenum, offset: GLuint) {
-    unsafe { _glDrawElements(mode, count, element_type, offset) }
+    unsafe { sys::_glDrawElements(mode, count, element_type, offset) }
 }
 
 pub fn gl_get_uniform_location(program: GLuint, name: &str) -> GLint {
@@ -385,35 +242,35 @@ pub fn gl_get_uniform_location(program: GLuint, name: &str) -> GLint {
         // Stack-allocate for typical uniform names (avoids heap allocation)
         let mut buf = [0u8; MAX_STACK_LEN + 1];
         buf[..name.len()].copy_from_slice(name.as_bytes());
-        unsafe { _glGetUniformLocation(program, buf.as_ptr() as *const c_char) }
+        unsafe { sys::_glGetUniformLocation(program, buf.as_ptr() as *const c_char) }
     } else {
         // Fallback to heap for unusually long names
         let c_string = CString::new(name).expect("CString::new failed");
-        unsafe { _glGetUniformLocation(program, c_string.as_ptr()) }
+        unsafe { sys::_glGetUniformLocation(program, c_string.as_ptr()) }
     }
 }
 
 pub fn gl_uniform_1f(location: GLint, v0: GLfloat) {
     unsafe {
-        _glUniform1f(location, v0);
+        sys::_glUniform1f(location, v0);
     }
 }
 
 pub fn gl_uniform_2f(location: GLint, v0: GLfloat, v1: GLfloat) {
     unsafe {
-        _glUniform2f(location, v0, v1);
+        sys::_glUniform2f(location, v0, v1);
     }
 }
 
 pub fn gl_uniform_3f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat) {
     unsafe {
-        _glUniform3f(location, v0, v1, v2);
+        sys::_glUniform3f(location, v0, v1, v2);
     }
 }
 
 pub fn gl_uniform_4f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat) {
     unsafe {
-        _glUniform4f(location, v0, v1, v2, v3);
+        sys::_glUniform4f(location, v0, v1, v2, v3);
     }
 }
 
@@ -424,39 +281,39 @@ pub fn gl_uniform_matrix_4fv(
     value: *const GLfloat,
 ) {
     unsafe {
-        _glUniformMatrix4fv(location, count, transpose, value);
+        sys::_glUniformMatrix4fv(location, count, transpose, value);
     }
 }
 
 pub fn gl_point_size(size: GLfloat) {
-    unsafe { _glPointSize(size) }
+    unsafe { sys::_glPointSize(size) }
 }
 
 pub fn gl_enable(cap: u32) {
     unsafe {
-        _glEnable(cap);
+        sys::_glEnable(cap);
     }
 }
 
 pub fn gl_blend_func(sfactor: GLenum, dfactor: GLenum) {
-    unsafe { _glBlendFunc(sfactor, dfactor) }
+    unsafe { sys::_glBlendFunc(sfactor, dfactor) }
 }
 
 pub fn gl_active_texture(unit: GLenum) {
     unsafe {
-        _glActiveTexture(unit);
+        sys::_glActiveTexture(unit);
     }
 }
 
 pub fn gl_tex_parameteri(target: GLenum, pname: GLenum, param: GLint) {
     unsafe {
-        _glTexParameteri(target, pname, param);
+        sys::_glTexParameteri(target, pname, param);
     }
 }
 
 pub fn gl_generate_mipmap(target: GLenum) {
     unsafe {
-        _glGenerateMipmap(target);
+        sys::_glGenerateMipmap(target);
     }
 }
 
@@ -472,7 +329,7 @@ pub fn gl_tex_image_2d(
     data: *const GLvoid,
 ) {
     unsafe {
-        _glTexImage2D(
+        sys::_glTexImage2D(
             target,
             level,
             internalformat,
@@ -498,7 +355,7 @@ pub fn gl_tex_sub_image_2d(
     data: *const GLvoid,
 ) {
     unsafe {
-        _glTexSubImage2D(
+        sys::_glTexSubImage2D(
             target,
             level,
             xoffset,
@@ -514,12 +371,12 @@ pub fn gl_tex_sub_image_2d(
 
 pub fn gl_pixel_storei(pname: GLenum, param: GLint) {
     unsafe {
-        _glPixelStorei(pname, param);
+        sys::_glPixelStorei(pname, param);
     }
 }
 
 pub fn gl_delete_texture(texture: GLuint) {
     unsafe {
-        _glDeleteTexture(texture);
+        sys::_glDeleteTexture(texture);
     }
 }
