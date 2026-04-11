@@ -94,8 +94,8 @@ fn main() {
 
     app.add_shapes(vec![
         // Line from (100, 200) to (300, 250)
-        shape((0.0, 0.0),
-            ShapeKind::Line(Line::new((100.0, 200.0), (300.0, 250.0))),
+        shape((100.0, 200.0),
+            ShapeKind::Line(Line::new((0.0, 0.0), (200.0, 50.0))),
             stroke_style(Color::from_rgb(0.0, 1.0, 0.0), 1.0),
         ),
         // Polyline starting at (100, 300)

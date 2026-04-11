@@ -414,10 +414,17 @@ impl ShapeRenderable {
     fn line(shape: Line, stroke: Color, stroke_width: f32) -> Self {
         let (x1, y1) = shape.start;
         let (x2, y2) = shape.end;
-        let geometry = ShapeRenderable::line_geometry(x1, y1, x2, y2, stroke_width);
+        // Normalize: anchor the line's start point at local (0, 0) so that
+        // rotation/scale pivot around the start and set_position places the
+        // start point at the given coordinates. Matches Polyline/Polygon.
+        let geometry =
+            ShapeRenderable::line_geometry(0.0, 0.0, x2 - x1, y2 - y1, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
 
-        ShapeRenderable::new(mesh, ShapeKind::Line(shape))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Line(shape));
+        s.x = x1;
+        s.y = y1;
+        s
     }
 
     fn polyline(polyline: Polyline, stroke: Color, stroke_width: f32) -> Self {
@@ -439,27 +446,6 @@ impl ShapeRenderable {
         s
     }
 
-    /// Helper for arc: creates a polyline from pre-computed points
-    fn polyline_from_points(
-        points: &[(f32, f32)],
-        shape: ShapeKind,
-        stroke: Color,
-        stroke_width: f32,
-    ) -> Self {
-        assert!(points.len() >= 2, "Polyline requires at least two points");
-
-        let (x0, y0) = points[0];
-        let rel_points: Vec<(f32, f32)> = points.iter().map(|(x, y)| (x - x0, y - y0)).collect();
-
-        let geometry = ShapeRenderable::polyline_geometry(&rel_points, stroke_width);
-        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
-
-        let mut s = ShapeRenderable::new(mesh, shape);
-        s.x = x0;
-        s.y = y0;
-        s
-    }
-
     fn arc(arc: ArcShape, stroke: Color, stroke_width: f32) -> Self {
         use std::f32::consts::TAU;
 
@@ -471,7 +457,9 @@ impl ShapeRenderable {
             sweep += TAU;
         }
 
-        // Generate points at origin, counter-clockwise from start to end
+        // Generate points around the arc's center, which stays at local (0, 0).
+        // Leaving the points un-shifted means set_position places the center,
+        // and rotation/scale pivot around the center.
         let mut points = Vec::with_capacity(segments + 1);
         for i in 0..=segments {
             let t = i as f32 / segments as f32;
@@ -481,7 +469,9 @@ impl ShapeRenderable {
             points.push((px, py));
         }
 
-        Self::polyline_from_points(&points, ShapeKind::Arc(arc), stroke, stroke_width)
+        let geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
+        ShapeRenderable::new(mesh, ShapeKind::Arc(arc))
     }
 
     fn triangle(triangle: Triangle, color: Color) -> Self {
