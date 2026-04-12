@@ -24,9 +24,9 @@ const MIN_STROKE_WIDTH: f32 = 1.0;
 /// - acts as the pivot for rotation,
 /// - acts as the origin for scaling.
 ///
-/// `Default` uses each shape's natural anchor. All other variants resolve
-/// against the shape's axis-aligned bounding box (in screen-space Y-down
-/// convention, so `TopLeft` is the visually top-left corner).
+/// `Default` uses each shape's natural anchor. Compass variants resolve
+/// against the shape's axis-aligned bounding box (North = top edge,
+/// East = right edge, etc. in screen-space Y-down convention).
 ///
 /// `Custom(x, y)` specifies an arbitrary point in the shape's local
 /// coordinate space.
@@ -34,27 +34,27 @@ const MIN_STROKE_WIDTH: f32 = 1.0;
 /// ## Natural defaults
 ///
 /// - `Point`, `Circle`, `Ellipse`, `Image`, `Arc`: center
-/// - `Rectangle`, `RoundedRectangle`: top-left corner
+/// - `Rectangle`, `RoundedRectangle`: north-west corner (top-left)
 /// - `Line`, `Polyline`, `Polygon`, `MultiPoint`: first vertex
 /// - `Triangle`: centroid
-/// - `Text`: top-left of the text cell
+/// - `Text`: north-west corner of the text cell
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Anchor {
     Default,
     Center,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-    Top,
-    Bottom,
-    Left,
-    Right,
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
     Custom(f32, f32),
 }
 
 /// Shared anchor resolution for Rectangle / RoundedRectangle (bbox = (0,0)..(w,h)).
-/// Default is top-left (0, 0) in Y-down screen space.
+/// Default is NorthWest (0, 0) in Y-down screen space.
 fn rectangle_anchor(width: f32, height: f32, anchor: Anchor) -> (f32, f32) {
     resolve_anchor(
         anchor,
@@ -94,14 +94,14 @@ fn resolve_anchor(
     match anchor {
         Anchor::Default => default,
         Anchor::Center => (cx, cy),
-        Anchor::TopLeft => (min_x, min_y),
-        Anchor::TopRight => (max_x, min_y),
-        Anchor::BottomLeft => (min_x, max_y),
-        Anchor::BottomRight => (max_x, max_y),
-        Anchor::Top => (cx, min_y),
-        Anchor::Bottom => (cx, max_y),
-        Anchor::Left => (min_x, cy),
-        Anchor::Right => (max_x, cy),
+        Anchor::North => (cx, min_y),
+        Anchor::NorthEast => (max_x, min_y),
+        Anchor::East => (max_x, cy),
+        Anchor::SouthEast => (max_x, max_y),
+        Anchor::South => (cx, max_y),
+        Anchor::SouthWest => (min_x, max_y),
+        Anchor::West => (min_x, cy),
+        Anchor::NorthWest => (min_x, min_y),
         Anchor::Custom(x, y) => (x, y),
     }
 }

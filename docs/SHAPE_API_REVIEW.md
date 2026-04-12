@@ -49,7 +49,7 @@ ShapeRenderable::builder(shape, style)
     .build()
 ```
 
-Available anchors: `Default`, `Center`, `TopLeft`, `TopRight`, `BottomLeft`, `BottomRight`, `Top`, `Bottom`, `Left`, `Right`, `Custom(f32, f32)`.
+Available anchors: `Default`, `Center`, `North`, `NorthEast`, `East`, `SouthEast`, `South`, `SouthWest`, `West`, `NorthWest`, `Custom(f32, f32)`.
 
 All variants resolve against the shape's axis-aligned bounding box. `Custom(x, y)` specifies an arbitrary point in local coordinates. `Default` preserves the per-shape natural anchor listed above.
 

@@ -11,7 +11,7 @@
 
 ### Added
 
-- **Configurable anchor system.** New `Anchor` enum (Default, Center, TopLeft, TopRight, BottomLeft, BottomRight, Top, Bottom, Left, Right, Custom) and `ShapeRenderableBuilder` let users control which point on a shape is used for positioning, rotation, and scaling:
+- **Configurable anchor system.** New `Anchor` enum (Default, Center, North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest, Custom) and `ShapeRenderableBuilder` let users control which point on a shape is used for positioning, rotation, and scaling:
   ```rust
   ShapeRenderable::builder(shape, style)
       .anchor(Anchor::Center)
