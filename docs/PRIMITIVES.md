@@ -8,7 +8,7 @@ Graphics primitives needed for 2D visualization applications (maps, radar, data 
 |-----------|----------|--------|
 | **Text** | Place names, callsigns, labels, waypoint names, sector labels | ✓ Complete |
 | **Rotated shapes** | Aircraft symbols, runway representations, oriented markers | ✓ Complete |
-| **Dashed/dotted lines** | Borders, restricted zones, predicted tracks, FIR boundaries, planned routes | Missing |
+| **Dashed/dotted lines** | Borders, restricted zones, predicted tracks, FIR boundaries, planned routes | ✓ Complete |
 | **Arrow** | Direction indicators, velocity vectors, heading, wind barbs, north arrow | Missing |
 | **Thick polyline (variable width)** | Roads, rivers, airways, route highlighting | Missing |
 

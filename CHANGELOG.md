@@ -21,6 +21,19 @@
 
 - **Centroid helpers** on `Line` (midpoint), `Triangle` (vertex average), `MultiPoint` (vertex average), `Polyline` (vertex average), and `Polygon` (area centroid via shoelace formula).
 
+- **Fluent setter chaining.** All `ShapeRenderable` setters (`set_position`, `set_scale`, `set_rotation`, `set_z_order`, `set_fill_color`, `set_stroke_color`, and instance setters) now return `&mut Self`:
+  ```rust
+  shape.set_position(x, y).set_rotation(0.5).set_z_order(1);
+  ```
+
+- **Dashed line rendering.** GPU-accelerated dashed/dotted lines via a dedicated shader pair that discards fragments in gap regions based on per-vertex cumulative distance. Supports `Line`, `Polyline`, `Arc`, and `Rectangle` outlines:
+  ```rust
+  ShapeStyle::dashed_stroke(color, 2.0, 10.0, 5.0)  // 10px dash, 5px gap
+  ShapeStyle::stroke(color, 2.0).with_dash(10.0, 5.0) // chaining variant
+  ```
+
+- **New examples:** `anchor_rotations` (rotation pivots demo), `dashed_lines` (dash patterns demo).
+
 ### Fixed
 
 - Line, Arc, and Triangle rotation/scale now pivot around a meaningful point on the shape instead of the world origin or an arbitrary perimeter point.

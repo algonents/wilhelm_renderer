@@ -5,7 +5,7 @@
 Features driven by the primary use case: SkyTracker ATM radar display (Controller Working Position).
 
 ### Primitives (see PRIMITIVES.md)
-- [ ] Dashed/dotted lines — predicted tracks, FIR boundaries, inactive routes
+- [x] Dashed/dotted lines — predicted tracks, FIR boundaries, inactive routes
 - [ ] Arrow — velocity vectors, heading indicators, wind barbs
 - [ ] Sector / pie slice — radar coverage, airspace sectors
 - [ ] Ring / annulus — range rings, distance indicators
@@ -13,8 +13,8 @@ Features driven by the primary use case: SkyTracker ATM radar display (Controlle
 - [ ] Thick polyline (variable width) — airways, route highlighting
 
 ### Rendering Capabilities
-- [ ] Alpha/opacity — overlapping sectors, dimmed coasting tracks, semi-transparent regions
-- [ ] Style mutation — `set_fill_color()`, `set_stroke_color()`, `set_stroke_width()` without rebuilding shapes
+- [x] Alpha/opacity — overlapping sectors, dimmed coasting tracks, semi-transparent regions
+- [x] Style mutation — `set_fill_color()`, `set_stroke_color()`, `set_stroke_width()` without rebuilding shapes
 - [ ] Z-ordering / layers — map, routes, tracks, labels, selection (ROADMAP Phase 4)
 - [ ] Blend modes — additive blending for radar sweep effects
 
@@ -23,9 +23,9 @@ Features driven by the primary use case: SkyTracker ATM radar display (Controlle
 - [ ] Mouse drag to pan (ROADMAP Phase 3)
 
 ### API Improvements (see SHAPE_API_REVIEW.md)
-- [ ] `Color::from_rgba()` — alpha channel support
-- [ ] `Origin` enum — configurable anchor/pivot point per shape
-- [ ] Fix Circle/Ellipse SVG export positioning bug
+- [x] `Color::from_rgba()` — alpha channel support
+- [x] `Origin` enum — configurable anchor/pivot point per shape (shipped as `Anchor` in v0.11.0)
+- [x] ~~Fix Circle/Ellipse SVG export positioning bug~~ — SVG export removed (PR #43)
 - [ ] Consistent `MIN_STROKE_WIDTH` usage
 
 ---
@@ -61,7 +61,7 @@ Technical debt and improvement areas identified in code review.
 
 - [x] `app.rs:25` - Make clear color configurable (hardcoded to `0.07, 0.13, 0.17`)
 - [x] `shaperenderable.rs:11` - Make `SCALE_FACTOR` configurable (now per-shape `scale` field)
-- [ ] Rotation pivot points are hardcoded per shape type (Image/Circle/Ellipse rotate around center; Rectangle/Polygon rotate around corner/first vertex). Add configurable pivot via `ShapeRenderable` API (e.g., `set_pivot(Pivot::Center)` or `Pivot::TopLeft`). Implementation is geometry-only — shader always rotates around origin, pivot controls how vertices are generated.
+- [x] Rotation pivot points are hardcoded per shape type — resolved via `Anchor` enum and `ShapeRenderableBuilder` in v0.11.0.
 
 ## Performance
 
