@@ -6,23 +6,77 @@ A comprehensive analysis of inconsistencies, unintuitive behaviors, and improvem
 
 ## 1. Anchor Point Inconsistencies
 
-The `(x, y)` position parameter means different things depending on the shape:
+### How anchors work at the shader level
+
+`shape.vert` applies the transform:
+
+```glsl
+rotated = rotate(aPos, u_rotation);
+p       = rotated * u_scale + u_screen_offset + aInstanceXY;
+```
+
+Consequences:
+
+- **Anchor, rotation pivot, and scale origin are always the same point** — wherever `(0, 0)` sits in each shape's *local* vertex data.
+- `set_position(x, y)` writes `u_screen_offset` only; it does not move geometry relative to the shape.
+- The behavior of every shape is therefore determined by one question: *where is (0, 0) in the mesh it builds?*
+
+### Summary: anchor / rotation pivot / scale origin (corrected)
+
+Because of the shader, all three columns are always identical. What differs is *where that shared point lies on the shape.*
 
 | Shape | Anchor Point | Rotation Pivot | Scale Origin |
 |-------|-------------|----------------|--------------|
-| Circle, Ellipse | Center | Center | Center |
+| Point | The point itself | N/A | N/A |
+| MultiPoint | First point | First point | First point |
+| Polyline | First point | First point | First point |
+| Polygon | First vertex | First vertex | First vertex |
+| Circle | Center | Center | Center |
+| Ellipse | Center | Center | Center |
 | Image | Center | Center | Center |
-| Arc | Center | Center | Center |
-| Rectangle, RoundedRectangle | Top-left corner | Top-left corner | Top-left corner |
-| Line | World offset added to start/end | Start point | Start point |
-| Polygon, Polyline, MultiPoint | First point | First point | First point |
-| Triangle | Offset from vertices | Vertex-dependent | Vertex-dependent |
-| Text | Baseline-left | N/A | N/A |
-| Point | Exact position | N/A | N/A |
+| Rectangle | Bottom-left corner (top-left visually under Y-down) | Same | Same |
+| RoundedRectangle | Same as Rectangle | Same | Same |
+| **Line** | **World origin** (vertices baked absolute) | **World origin** | **World origin** |
+| **Triangle** | **World origin** (vertices baked absolute) | **World origin** | **World origin** |
+| **Arc** | **First perimeter point** (not the arc center) | **First perimeter point** | **First perimeter point** |
+| **Text** | **Top-left of text cell** (not the baseline) | N/A | N/A |
 
-**Impact:** Scaling a Rectangle at (50, 50) with scale=2 grows it right and down from the corner. Scaling a Circle at (100, 100) with scale=2 grows it symmetrically from center. Users must know each shape's anchor to predict transform behavior.
+### Per-shape anchors (ground truth from the code)
 
-**Recommendation:** Add a configurable `Origin` enum defaulting to current behavior per shape. Users can opt into `Origin::Center` for uniform behavior.
+| Shape | Local (0,0) location | Status |
+|-------|----------------------|--------|
+| Point | The point itself (vertex `[0,0]`) | OK |
+| MultiPoint | First point (all points shifted by `-points[0]`, `s.x/y = points[0]`) | OK |
+| Polyline | First point (same pattern as MultiPoint) | OK |
+| Polygon | First polygon vertex (same pattern) | OK |
+| Circle | Center | OK |
+| Ellipse | Center | OK |
+| Image | Center (geometry built with `-hw..+hw`, `-hh..+hh`) | OK |
+| Rectangle | Bottom-left corner of the quad (visually top-left under a Y-down projection) | OK, but differs from Circle/Ellipse/Image |
+| RoundedRectangle | Same corner as Rectangle. The fan's center vertex at `(w/2, h/2)` is just a fan seed, **not** the pivot | OK, but differs from Circle/Ellipse/Image |
+| **Line** | **World origin** — `line_geometry` bakes absolute `(x1,y1)`/`(x2,y2)` into the vertex buffer; `s.x/y` default to 0 | **Bug** |
+| **Triangle** | **World origin** — vertices baked as-is with no normalization; `s.x/y` default to 0 | **Bug** |
+| **Arc** | **First perimeter point** — `arc()` builds points around the arc's center, then `polyline_from_points` subtracts `points[0]`, which is the *starting edge point*, not the center | **Bug** |
+| **Text** | **Top-left of the text cell**, not the baseline — `baseline_y = font_size`, so local `y=0` is `font_size` pixels above the baseline | Doc was wrong; may also want to revisit |
+
+### Three levels of inconsistency
+
+1. **Closed shapes split three ways.** Circle/Ellipse/Image anchor at the center; Rectangle/RoundedRectangle anchor at a corner; Polygon anchors at its first vertex.
+2. **Vertex-defined shapes split two ways.** Polyline and Polygon normalize to their first point (rotating around that point is at least usable). Line and Triangle do **not** normalize at all — they bake world-space vertex coordinates into the mesh, so rotation and scale pivot around the world origin, not the shape. A Triangle positioned near `(100, 100)` rotates around `(0, 0)`, sweeping across the scene.
+3. **Arc is broken independently of all of the above.** `set_position(cx, cy)` does not place the arc's center at `(cx, cy)`, and rotation does not spin the arc around its own center — both are offset by the arc's first edge point.
+
+### Impact
+
+- Scaling a Rectangle at `(50, 50)` with `scale = 2` grows it from the corner; scaling a Circle at the same position grows it symmetrically. Users must memorize each shape's anchor to predict transforms.
+- Rotating a Line or Triangle is effectively unusable unless the shape is constructed at the world origin and positioned via `set_position()` afterwards (the workaround `sky_guard_client` already uses for other reasons, see Section 2).
+- Rotating an Arc around its "center" requires pre-computing the offset from the first edge point and applying it manually — non-obvious and undocumented.
+
+### Recommendation
+
+Treat this in two passes:
+
+1. **Fix the bugs first, independent of any API change.** Line, Triangle, and Arc should normalize their geometry the same way Polyline/Polygon already do (compute a local origin, shift vertices by `-origin`, store the origin in `s.x/s.y`). This alone makes rotation and scale work predictably for those shapes without changing any public API.
+2. **Then consider a configurable `Origin` enum** for shapes where users legitimately want a choice (e.g., Rectangle corner vs. center). Default to current post-fix behavior to stay non-breaking; opt in for uniform behavior.
 
 ```rust
 pub enum Origin {

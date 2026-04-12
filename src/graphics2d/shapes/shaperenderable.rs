@@ -17,6 +17,95 @@ use std::rc::Rc;
 
 const MIN_STROKE_WIDTH: f32 = 1.0;
 
+/// Anchor point used for positioning, rotation, and scaling.
+///
+/// The anchor is the single point on the shape that:
+/// - is placed at the coordinates passed to [`ShapeRenderable::set_position`],
+/// - acts as the pivot for rotation,
+/// - acts as the origin for scaling.
+///
+/// `Default` uses each shape's natural anchor. All other variants resolve
+/// against the shape's axis-aligned bounding box (in screen-space Y-down
+/// convention, so `TopLeft` is the visually top-left corner).
+///
+/// `Custom(x, y)` specifies an arbitrary point in the shape's local
+/// coordinate space.
+///
+/// ## Natural defaults
+///
+/// - `Point`, `Circle`, `Ellipse`, `Image`, `Arc`: center
+/// - `Rectangle`, `RoundedRectangle`: top-left corner
+/// - `Line`, `Polyline`, `Polygon`, `MultiPoint`: first vertex
+/// - `Triangle`: centroid
+/// - `Text`: top-left of the text cell
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Anchor {
+    Default,
+    Center,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    Top,
+    Bottom,
+    Left,
+    Right,
+    Custom(f32, f32),
+}
+
+/// Shared anchor resolution for Rectangle / RoundedRectangle (bbox = (0,0)..(w,h)).
+/// Default is top-left (0, 0) in Y-down screen space.
+fn rectangle_anchor(width: f32, height: f32, anchor: Anchor) -> (f32, f32) {
+    resolve_anchor(
+        anchor,
+        (0.0, 0.0),
+        (width, height),
+        (0.0, 0.0),
+    )
+}
+
+/// Axis-aligned bounding box over a slice of points. Panics on empty input.
+fn bbox_of_points(points: &[(f32, f32)]) -> ((f32, f32), (f32, f32)) {
+    let mut min_x = f32::INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+    for &(x, y) in points {
+        if x < min_x { min_x = x; }
+        if y < min_y { min_y = y; }
+        if x > max_x { max_x = x; }
+        if y > max_y { max_y = y; }
+    }
+    ((min_x, min_y), (max_x, max_y))
+}
+
+/// Resolve an `Anchor` to a point in the shape's local coordinate space,
+/// given the shape's bbox and its natural default.
+fn resolve_anchor(
+    anchor: Anchor,
+    bbox_min: (f32, f32),
+    bbox_max: (f32, f32),
+    default: (f32, f32),
+) -> (f32, f32) {
+    let (min_x, min_y) = bbox_min;
+    let (max_x, max_y) = bbox_max;
+    let cx = (min_x + max_x) * 0.5;
+    let cy = (min_y + max_y) * 0.5;
+    match anchor {
+        Anchor::Default => default,
+        Anchor::Center => (cx, cy),
+        Anchor::TopLeft => (min_x, min_y),
+        Anchor::TopRight => (max_x, min_y),
+        Anchor::BottomLeft => (min_x, max_y),
+        Anchor::BottomRight => (max_x, max_y),
+        Anchor::Top => (cx, min_y),
+        Anchor::Bottom => (cx, max_y),
+        Anchor::Left => (min_x, cy),
+        Anchor::Right => (max_x, cy),
+        Anchor::Custom(x, y) => (x, y),
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ShapeStyle {
     pub fill: Option<Color>,
@@ -277,81 +366,102 @@ impl ShapeRenderable {
     pub fn stroke_color(&self) -> Option<Color> {
         self.stroke_mesh.as_ref().and_then(|s| s.color)
     }
+    /// Construct a `ShapeRenderable` with the shape's default anchor.
+    ///
+    /// Equivalent to `ShapeRenderable::builder(shape, style).build()`.
     pub fn from_shape(shape: ShapeKind, style: ShapeStyle) -> Self {
+        Self::builder(shape, style).build()
+    }
+
+    /// Start a builder that lets you override the anchor (and, later, other
+    /// per-shape parameters) before constructing the `ShapeRenderable`.
+    pub fn builder(shape: ShapeKind, style: ShapeStyle) -> ShapeRenderableBuilder {
+        ShapeRenderableBuilder {
+            shape,
+            style,
+            anchor: Anchor::Default,
+        }
+    }
+
+    fn from_shape_with_anchor(shape: ShapeKind, style: ShapeStyle, anchor: Anchor) -> Self {
         match shape {
             ShapeKind::Point => {
-                ShapeRenderable::point(style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::point(style.fill.unwrap_or(Color::white()), anchor)
             }
             ShapeKind::MultiPoint(mp) => {
-                ShapeRenderable::multi_points(mp, style.fill.unwrap_or(Color::white()))
+                ShapeRenderable::multi_points(mp, style.fill.unwrap_or(Color::white()), anchor)
             }
             ShapeKind::Line(line) => ShapeRenderable::line(
                 line,
                 style.stroke_color.unwrap_or_else(Color::white),
                 style.stroke_width.unwrap_or(1.0),
+                anchor,
             ),
-            ShapeKind::Polyline(poly_line) => {
-                ShapeRenderable::polyline(
-                    poly_line,
-                    style.stroke_color.unwrap_or(Color::white()),
+            ShapeKind::Polyline(poly_line) => ShapeRenderable::polyline(
+                poly_line,
+                style.stroke_color.unwrap_or(Color::white()),
+                style.stroke_width.unwrap_or(1.0),
+                anchor,
+            ),
+            ShapeKind::Triangle(triangle) => ShapeRenderable::triangle(
+                triangle,
+                style.fill.unwrap_or(Color::white()),
+                anchor,
+            ),
+            ShapeKind::Rectangle(rect) => match (style.fill, style.stroke_color) {
+                (Some(fill), Some(stroke)) => ShapeRenderable::rectangle_fill_and_stroke(
+                    rect,
+                    fill,
+                    stroke,
                     style.stroke_width.unwrap_or(1.0),
-                )
-            }
-
-            ShapeKind::Triangle(triangle) => {
-                ShapeRenderable::triangle(triangle, style.fill.unwrap_or(Color::white()))
-            }
-
-            ShapeKind::Rectangle(rect) => {
-                match (style.fill, style.stroke_color) {
-                    (Some(fill), Some(stroke)) => {
-                        // Fill and stroke
-                        ShapeRenderable::rectangle_fill_and_stroke(
-                            rect,
-                            fill,
-                            stroke,
-                            style.stroke_width.unwrap_or(1.0),
-                        )
-                    }
-                    (None, Some(stroke)) => {
-                        // Stroke-only
-                        ShapeRenderable::rectangle_outline(
-                            rect,
-                            stroke,
-                            style.stroke_width.unwrap_or(1.0),
-                        )
-                    }
-                    (fill, None) => {
-                        // Fill-only (default)
-                        ShapeRenderable::rectangle(rect, fill.unwrap_or(Color::white()))
-                    }
-                }
-            }
-
-            ShapeKind::RoundedRectangle(rr) => {
-                ShapeRenderable::rounded_rectangle(rr, style.fill.unwrap_or(Color::white()))
-            }
-
-            ShapeKind::Polygon(polygon) => {
-                ShapeRenderable::polygon(polygon, style.fill.unwrap_or(Color::white()))
-            }
-            ShapeKind::Circle(circle) => {
-                ShapeRenderable::circle(circle, style.fill.unwrap_or(Color::white()))
-            }
-            ShapeKind::Ellipse(ellipse) => {
-                ShapeRenderable::ellipse(ellipse, style.fill.unwrap_or(Color::white()))
-            }
+                    anchor,
+                ),
+                (None, Some(stroke)) => ShapeRenderable::rectangle_outline(
+                    rect,
+                    stroke,
+                    style.stroke_width.unwrap_or(1.0),
+                    anchor,
+                ),
+                (fill, None) => ShapeRenderable::rectangle(
+                    rect,
+                    fill.unwrap_or(Color::white()),
+                    anchor,
+                ),
+            },
+            ShapeKind::RoundedRectangle(rr) => ShapeRenderable::rounded_rectangle(
+                rr,
+                style.fill.unwrap_or(Color::white()),
+                anchor,
+            ),
+            ShapeKind::Polygon(polygon) => ShapeRenderable::polygon(
+                polygon,
+                style.fill.unwrap_or(Color::white()),
+                anchor,
+            ),
+            ShapeKind::Circle(circle) => ShapeRenderable::circle(
+                circle,
+                style.fill.unwrap_or(Color::white()),
+                anchor,
+            ),
+            ShapeKind::Ellipse(ellipse) => ShapeRenderable::ellipse(
+                ellipse,
+                style.fill.unwrap_or(Color::white()),
+                anchor,
+            ),
             ShapeKind::Arc(arc) => ShapeRenderable::arc(
                 arc,
                 style.stroke_color.unwrap_or(Color::white()),
                 style.stroke_width.unwrap_or(1.0),
+                anchor,
             ),
             ShapeKind::Image(_) => {
                 unimplemented!("ShapeRenderable::from_shape cannot create Image without path")
             }
-            ShapeKind::Text(text) => {
-                ShapeRenderable::text(text, style.fill.unwrap_or(Color::white()))
-            }
+            ShapeKind::Text(text) => ShapeRenderable::text(
+                text,
+                style.fill.unwrap_or(Color::white()),
+                anchor,
+            ),
         }
     }
 
@@ -386,81 +496,77 @@ impl ShapeRenderable {
         }
     }
 
-    fn point(color: Color) -> Self {
+    fn point(color: Color, _anchor: Anchor) -> Self {
+        // Point has only one vertex at (0, 0); anchor is trivially that point
+        // for every variant (bbox is degenerate). Ignore the anchor.
         let geometry = ShapeRenderable::point_geometry();
         let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
         ShapeRenderable::new(mesh, ShapeKind::Point)
     }
 
-    fn multi_points(multi_point: MultiPoint, color: Color) -> Self {
-        let (x0, y0) = multi_point.points[0];
+    fn multi_points(multi_point: MultiPoint, color: Color, anchor: Anchor) -> Self {
+        assert!(!multi_point.points.is_empty(), "MultiPoint requires at least one point");
 
-        // Shift points to be relative to first point (anchor)
+        let (bbox_min, bbox_max) = bbox_of_points(&multi_point.points);
+        let default = multi_point.points[0];
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
         let rel_points: Vec<(GLfloat, GLfloat)> = multi_point
             .points
             .iter()
-            .map(|(px, py)| (px - x0, py - y0))
+            .map(|(px, py)| (px - ax, py - ay))
             .collect();
 
         let geometry = ShapeRenderable::point_list_geometry(&rel_points);
         let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::MultiPoint(multi_point));
-        s.x = x0;
-        s.y = y0;
+        s.x = ax;
+        s.y = ay;
         s
     }
 
-    fn line(shape: Line, stroke: Color, stroke_width: f32) -> Self {
+    fn line(shape: Line, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
         let (x1, y1) = shape.start;
         let (x2, y2) = shape.end;
-        let geometry = ShapeRenderable::line_geometry(x1, y1, x2, y2, stroke_width);
+        let bbox_min = (x1.min(x2), y1.min(y2));
+        let bbox_max = (x1.max(x2), y1.max(y2));
+        let default = (x1, y1); // start point
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let geometry =
+            ShapeRenderable::line_geometry(x1 - ax, y1 - ay, x2 - ax, y2 - ay, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
 
-        ShapeRenderable::new(mesh, ShapeKind::Line(shape))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Line(shape));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn polyline(polyline: Polyline, stroke: Color, stroke_width: f32) -> Self {
+    fn polyline(polyline: Polyline, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
         assert!(polyline.points.len() >= 2, "Polyline requires at least two points");
 
-        let (x0, y0) = polyline.points[0];
+        let (bbox_min, bbox_max) = bbox_of_points(&polyline.points);
+        let default = polyline.points[0];
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
         let rel_points: Vec<(f32, f32)> = polyline
             .points
             .iter()
-            .map(|(px, py)| (px - x0, py - y0))
+            .map(|(px, py)| (px - ax, py - ay))
             .collect();
 
         let geometry = ShapeRenderable::polyline_geometry(&rel_points, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Polyline(polyline));
-        s.x = x0;
-        s.y = y0;
+        s.x = ax;
+        s.y = ay;
         s
     }
 
-    /// Helper for arc: creates a polyline from pre-computed points
-    fn polyline_from_points(
-        points: &[(f32, f32)],
-        shape: ShapeKind,
-        stroke: Color,
-        stroke_width: f32,
-    ) -> Self {
-        assert!(points.len() >= 2, "Polyline requires at least two points");
-
-        let (x0, y0) = points[0];
-        let rel_points: Vec<(f32, f32)> = points.iter().map(|(x, y)| (x - x0, y - y0)).collect();
-
-        let geometry = ShapeRenderable::polyline_geometry(&rel_points, stroke_width);
-        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
-
-        let mut s = ShapeRenderable::new(mesh, shape);
-        s.x = x0;
-        s.y = y0;
-        s
-    }
-
-    fn arc(arc: ArcShape, stroke: Color, stroke_width: f32) -> Self {
+    fn arc(arc: ArcShape, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
         use std::f32::consts::TAU;
 
         let segments = 64;
@@ -471,7 +577,7 @@ impl ShapeRenderable {
             sweep += TAU;
         }
 
-        // Generate points at origin, counter-clockwise from start to end
+        // Generate points around the arc's center (local origin).
         let mut points = Vec::with_capacity(segments + 1);
         for i in 0..=segments {
             let t = i as f32 / segments as f32;
@@ -481,38 +587,73 @@ impl ShapeRenderable {
             points.push((px, py));
         }
 
-        Self::polyline_from_points(&points, ShapeKind::Arc(arc), stroke, stroke_width)
+        // Bbox over the curve points; default anchor is the arc's circle center (0, 0).
+        let (bbox_min, bbox_max) = bbox_of_points(&points);
+        let default = (0.0, 0.0);
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let shifted: Vec<(f32, f32)> =
+            points.iter().map(|(x, y)| (x - ax, y - ay)).collect();
+        let geometry = ShapeRenderable::polyline_geometry(&shifted, stroke_width);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Arc(arc));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn triangle(triangle: Triangle, color: Color) -> Self {
-        let geometry = ShapeRenderable::triangle_geometry(&triangle.vertices);
+    fn triangle(triangle: Triangle, color: Color, anchor: Anchor) -> Self {
+        let [v0, v1, v2] = triangle.vertices;
+        let bbox_min = (v0.0.min(v1.0).min(v2.0), v0.1.min(v1.1).min(v2.1));
+        let bbox_max = (v0.0.max(v1.0).max(v2.0), v0.1.max(v1.1).max(v2.1));
+        let default = triangle.centroid();
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let shifted = [
+            (v0.0 - ax, v0.1 - ay),
+            (v1.0 - ax, v1.1 - ay),
+            (v2.0 - ax, v2.1 - ay),
+        ];
+        let geometry = ShapeRenderable::triangle_geometry(&shifted);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
-        ShapeRenderable::new(mesh, ShapeKind::Triangle(triangle))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Triangle(triangle));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn rectangle(rect: Rectangle, color: Color) -> Self {
-        let geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height);
+    fn rectangle(rect: Rectangle, color: Color, anchor: Anchor) -> Self {
+        let (ax, ay) = rectangle_anchor(rect.width, rect.height, anchor);
+        let geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height, ax, ay);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect))
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn rectangle_outline(rect: Rectangle, stroke: Color, stroke_width: f32) -> Self {
-        // Create a closed polyline forming the rectangle border
-        // Points: top-left -> top-right -> bottom-right -> bottom-left -> back to top-left
-        // Extra point at end provides direction for proper miter join at closing corner
+    fn rectangle_outline(rect: Rectangle, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
+        let (ax, ay) = rectangle_anchor(rect.width, rect.height, anchor);
+        // Closed polyline in the same local frame as the fill, shifted by anchor.
         let points = vec![
-            (0.0, 0.0),
-            (rect.width, 0.0),
-            (rect.width, rect.height),
-            (0.0, rect.height),
-            (0.0, 0.0),        // close the loop
-            (rect.width, 0.0), // direction hint for join at closing corner
+            (0.0 - ax, 0.0 - ay),
+            (rect.width - ax, 0.0 - ay),
+            (rect.width - ax, rect.height - ay),
+            (0.0 - ax, rect.height - ay),
+            (0.0 - ax, 0.0 - ay),                // close the loop
+            (rect.width - ax, 0.0 - ay),         // direction hint for join at closing corner
         ];
 
         let geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
-        ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect))
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
     fn rectangle_fill_and_stroke(
@@ -520,41 +661,57 @@ impl ShapeRenderable {
         fill: Color,
         stroke: Color,
         stroke_width: f32,
+        anchor: Anchor,
     ) -> Self {
-        // Fill geometry
-        let fill_geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height);
+        let (ax, ay) = rectangle_anchor(rect.width, rect.height, anchor);
+
+        let fill_geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height, ax, ay);
         let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
 
-        // Stroke geometry (closed polyline)
         let points = vec![
-            (0.0, 0.0),
-            (rect.width, 0.0),
-            (rect.width, rect.height),
-            (0.0, rect.height),
-            (0.0, 0.0),
-            (rect.width, 0.0),
+            (0.0 - ax, 0.0 - ay),
+            (rect.width - ax, 0.0 - ay),
+            (rect.width - ax, rect.height - ay),
+            (0.0 - ax, rect.height - ay),
+            (0.0 - ax, 0.0 - ay),
+            (rect.width - ax, 0.0 - ay),
         ];
         let stroke_geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
         let stroke_mesh = Mesh::with_color(default_shader(), stroke_geometry, Some(stroke));
 
-        ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::Rectangle(rect))
+        let mut s = ShapeRenderable::new_with_stroke(
+            fill_mesh,
+            stroke_mesh,
+            ShapeKind::Rectangle(rect),
+        );
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn rounded_rectangle(rr: RoundedRectangle, color: Color) -> Self {
+    fn rounded_rectangle(rr: RoundedRectangle, color: Color, anchor: Anchor) -> Self {
+        let (ax, ay) = rectangle_anchor(rr.width, rr.height, anchor);
         let geometry =
-            ShapeRenderable::rounded_rectangle_geometry(rr.width, rr.height, rr.radius, 8);
+            ShapeRenderable::rounded_rectangle_geometry(rr.width, rr.height, rr.radius, 8, ax, ay);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(mesh, ShapeKind::RoundedRectangle(rr))
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::RoundedRectangle(rr));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn polygon(polygon: Polygon, color: Color) -> Self {
+    fn polygon(polygon: Polygon, color: Color, anchor: Anchor) -> Self {
         assert!(polygon.points.len() >= 3, "Polygon requires at least 3 points");
 
-        let (x0, y0) = polygon.points[0];
+        let (bbox_min, bbox_max) = bbox_of_points(&polygon.points);
+        let default = polygon.points[0];
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
         let rel_points: Vec<(f32, f32)> = polygon
             .points
             .iter()
-            .map(|(px, py)| (px - x0, py - y0))
+            .map(|(px, py)| (px - ax, py - ay))
             .collect();
         let triangles = polygon.triangulate();
 
@@ -562,52 +719,103 @@ impl ShapeRenderable {
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Polygon(polygon));
-        s.x = x0;
-        s.y = y0;
+        s.x = ax;
+        s.y = ay;
         s
     }
 
-    fn circle(circle: Circle, color: Color) -> Self {
-        let geometry = ShapeRenderable::circle_geometry(circle.radius, 100);
+    fn circle(circle: Circle, color: Color, anchor: Anchor) -> Self {
+        let r = circle.radius;
+        let (ax, ay) = resolve_anchor(anchor, (-r, -r), (r, r), (0.0, 0.0));
+        let geometry = ShapeRenderable::circle_geometry(r, 100, ax, ay);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(mesh, ShapeKind::Circle(circle))
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Circle(circle));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn ellipse(ellipse: Ellipse, color: Color) -> Self {
-        let geometry = ShapeRenderable::ellipse_geometry(ellipse.radius_x, ellipse.radius_y, 64);
+    fn ellipse(ellipse: Ellipse, color: Color, anchor: Anchor) -> Self {
+        let rx = ellipse.radius_x;
+        let ry = ellipse.radius_y;
+        let (ax, ay) = resolve_anchor(anchor, (-rx, -ry), (rx, ry), (0.0, 0.0));
+        let geometry = ShapeRenderable::ellipse_geometry(rx, ry, 64, ax, ay);
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
-        ShapeRenderable::new(mesh, ShapeKind::Ellipse(ellipse))
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Ellipse(ellipse));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
-    fn text(text: Text, color: Color) -> Self {
-        // Get or create font atlas from cache (shared across text renderables)
+    fn text(text: Text, color: Color, anchor: Anchor) -> Self {
         let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size);
 
-        // Generate geometry for all characters
-        let geometry = {
+        // Generate raw glyph vertices and compute the bbox in one pass.
+        let (mut vertices, bbox_min, bbox_max, texture_id) = {
             let mut atlas = font_atlas.borrow_mut();
-            ShapeRenderable::text_geometry(&text.content, &mut atlas)
+            let (vs, bmin, bmax) = ShapeRenderable::text_raw_vertices(&text.content, &mut atlas);
+            let tex = atlas.texture_id();
+            (vs, bmin, bmax, tex)
         };
 
-        // Get texture ID while holding borrow
-        let texture_id = font_atlas.borrow().texture_id();
+        // Default anchor for Text is the top-left of the text cell (raw origin).
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, (0.0, 0.0));
 
-        // Create mesh with text shader and font atlas texture
+        // Apply the anchor shift to the position components (x, y at stride 4).
+        if ax != 0.0 || ay != 0.0 {
+            let stride = 4usize;
+            let mut i = 0;
+            while i + 1 < vertices.len() {
+                vertices[i] -= ax;
+                vertices[i + 1] -= ay;
+                i += stride;
+            }
+        }
+
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, 4);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, 4, 0));
+        geometry.add_vertex_attribute(Attribute::new(1, 2, 4, 2));
+
         let shader = text_shader();
         let mut mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
         mesh.color = Some(color);
 
-        ShapeRenderable::new(mesh, ShapeKind::Text(text))
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Text(text));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
     pub fn image_with_size(path: &str, width: f32, height: f32) -> ShapeRenderable {
+        Self::image_with_size_and_anchor(path, width, height, Anchor::Default)
+    }
+
+    fn image_with_size_and_anchor(
+        path: &str,
+        width: f32,
+        height: f32,
+        anchor: Anchor,
+    ) -> ShapeRenderable {
         let image = load_image(path);
         let texture_id = generate_texture_from_image(&image);
-        let geometry = ShapeRenderable::image_geometry(width, height);
+
+        // Image geometry is built centered on origin, so bbox = (-w/2..w/2, -h/2..h/2)
+        let hw = width * 0.5;
+        let hh = height * 0.5;
+        let (ax, ay) = resolve_anchor(anchor, (-hw, -hh), (hw, hh), (0.0, 0.0));
+
+        let geometry = ShapeRenderable::image_geometry(width, height, ax, ay);
         let shader = image_shader();
         let mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
 
-        ShapeRenderable::new(mesh, ShapeKind::Image(Image::new(width, height)))
+        let mut s =
+            ShapeRenderable::new(mesh, ShapeKind::Image(Image::new(width, height)));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
     pub fn image(path: &str) -> Self {
@@ -810,87 +1018,59 @@ impl ShapeRenderable {
         geometry
     }
 
-    fn rectangle_geometry(width: GLfloat, height: GLfloat) -> Geometry {
+    fn rectangle_geometry(width: GLfloat, height: GLfloat, ox: GLfloat, oy: GLfloat) -> Geometry {
         let vertices: Vec<GLfloat> = vec![
-            // bottom-left
-            0.0, 0.0, // bottom-right
-            width, 0.0, // top-left
-            0.0, height, // top-right
-            width, height,
+            0.0 - ox, 0.0 - oy,
+            width - ox, 0.0 - oy,
+            0.0 - ox, height - oy,
+            width - ox, height - oy,
         ];
 
-        let position_values_per_vertex = 2;
-        let values_per_vertex = position_values_per_vertex;
-
+        let values_per_vertex = 2;
         let mut geometry = Geometry::new(GL_TRIANGLE_STRIP);
         geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0,
-            position_values_per_vertex,
-            values_per_vertex as usize,
-            0,
-        ));
-
+        geometry.add_vertex_attribute(Attribute::new(0, 2, values_per_vertex as usize, 0));
         geometry
     }
 
-    fn circle_geometry(radius: GLfloat, segments: usize) -> Geometry {
-        let mut vertices: Vec<GLfloat> = Vec::with_capacity((segments + 2) * 5); // center + segments + wrap-around
-
-        // Center of the circle
-        vertices.extend_from_slice(&[0.0, 0.0]);
-
-        // Outer vertices
-        for i in 0..=segments {
-            let theta = (i as f32 / segments as f32) * std::f32::consts::TAU; // TAU = 2π
-            let x = radius * theta.cos();
-            let y = radius * theta.sin();
-            vertices.extend_from_slice(&[x, y]);
-        }
-
-        let position_values_per_vertex = 2;
-        let values_per_vertex = position_values_per_vertex;
-
-        let mut geometry = Geometry::new(GL_TRIANGLE_FAN);
-        geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0,
-            position_values_per_vertex,
-            values_per_vertex as usize,
-            0,
-        ));
-        geometry
-    }
-
-    fn ellipse_geometry(rx: f32, ry: f32, segments: usize) -> Geometry {
-        use std::f32::consts::PI;
-
+    fn circle_geometry(radius: GLfloat, segments: usize, ox: GLfloat, oy: GLfloat) -> Geometry {
         let mut vertices: Vec<GLfloat> = Vec::with_capacity((segments + 2) * 2);
 
-        // Center point (at origin)
-        vertices.extend_from_slice(&[0.0, 0.0]);
+        // Center of the circle
+        vertices.extend_from_slice(&[0.0 - ox, 0.0 - oy]);
 
-        // Perimeter points
         for i in 0..=segments {
-            let angle = 2.0 * PI * (i as f32) / (segments as f32);
-            let x = rx * angle.cos();
-            let y = ry * angle.sin();
+            let theta = (i as f32 / segments as f32) * std::f32::consts::TAU;
+            let x = radius * theta.cos() - ox;
+            let y = radius * theta.sin() - oy;
             vertices.extend_from_slice(&[x, y]);
         }
 
         let values_per_vertex = 2;
         let mut geometry = Geometry::new(GL_TRIANGLE_FAN);
         geometry.add_buffer(&vertices, values_per_vertex);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, values_per_vertex as usize, 0));
+        geometry
+    }
 
-        geometry.add_vertex_attribute(Attribute::new(
-            0, // position
-            2,
-            values_per_vertex as usize,
-            0,
-        ));
+    fn ellipse_geometry(rx: f32, ry: f32, segments: usize, ox: f32, oy: f32) -> Geometry {
+        use std::f32::consts::PI;
 
+        let mut vertices: Vec<GLfloat> = Vec::with_capacity((segments + 2) * 2);
+
+        vertices.extend_from_slice(&[0.0 - ox, 0.0 - oy]);
+
+        for i in 0..=segments {
+            let angle = 2.0 * PI * (i as f32) / (segments as f32);
+            let x = rx * angle.cos() - ox;
+            let y = ry * angle.sin() - oy;
+            vertices.extend_from_slice(&[x, y]);
+        }
+
+        let values_per_vertex = 2;
+        let mut geometry = Geometry::new(GL_TRIANGLE_FAN);
+        geometry.add_buffer(&vertices, values_per_vertex);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, values_per_vertex as usize, 0));
         geometry
     }
 
@@ -899,36 +1079,37 @@ impl ShapeRenderable {
         height: f32,
         radius: f32,
         segments: usize,
+        ox: f32,
+        oy: f32,
     ) -> Geometry {
         assert!(radius * 2.0 <= width && radius * 2.0 <= height);
 
         let mut vertices: Vec<GLfloat> = Vec::new();
 
         // 1. Add center point for triangle fan
-        let center_x = width / 2.0;
-        let center_y = height / 2.0;
+        let center_x = width / 2.0 - ox;
+        let center_y = height / 2.0 - oy;
         vertices.push(center_x);
         vertices.push(center_y);
 
         // 2. Define arcs for each corner: (cx, cy, start_angle, end_angle)
         let corners = [
-            (radius, radius, PI, 1.5 * PI),                   // top-left
-            (width - radius, radius, 1.5 * PI, 2.0 * PI),     // top-right
-            (width - radius, height - radius, 0.0, 0.5 * PI), // bottom-right
-            (radius, height - radius, 0.5 * PI, PI),          // bottom-left
+            (radius, radius, PI, 1.5 * PI),
+            (width - radius, radius, 1.5 * PI, 2.0 * PI),
+            (width - radius, height - radius, 0.0, 0.5 * PI),
+            (radius, height - radius, 0.5 * PI, PI),
         ];
 
         let mut first_arc_x = 0.0;
         let mut first_arc_y = 0.0;
         let mut is_first = true;
 
-        // 3. Generate corner arcs
         for &(cx, cy, start_angle, end_angle) in &corners {
             for i in 0..=segments {
                 let theta =
                     start_angle + (end_angle - start_angle) * (i as f32) / (segments as f32);
-                let x = cx + radius * theta.cos();
-                let y = cy + radius * theta.sin();
+                let x = cx + radius * theta.cos() - ox;
+                let y = cy + radius * theta.sin() - oy;
 
                 if is_first {
                     first_arc_x = x;
@@ -941,22 +1122,13 @@ impl ShapeRenderable {
             }
         }
 
-        // 4. Close the fan by repeating the first outer point
         vertices.push(first_arc_x);
         vertices.push(first_arc_y);
 
-        // 5. Build Geometry
         let values_per_vertex = 2;
         let mut geometry = Geometry::new(GL_TRIANGLE_FAN);
         geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0, // location 0 → position
-            2, // x and y
-            values_per_vertex as usize,
-            0,
-        ));
-
+        geometry.add_vertex_attribute(Attribute::new(0, 2, values_per_vertex as usize, 0));
         geometry
     }
 
@@ -988,109 +1160,124 @@ impl ShapeRenderable {
         geometry
     }
 
-    pub fn image_geometry(width: f32, height: f32) -> Geometry {
-        // Vertex format: [x, y, u, v]
-        // Geometry centered at origin for rotation around center
+    pub fn image_geometry(width: f32, height: f32, ox: f32, oy: f32) -> Geometry {
+        // Vertex format: [x, y, u, v]. Geometry built centered at origin,
+        // then shifted by (-ox, -oy) so the resolved anchor sits at local (0, 0).
         let hw = width / 2.0;
         let hh = height / 2.0;
         let vertices: Vec<f32> = vec![
             // Triangle 1
-            -hw, -hh, 0.0, 0.0, // bottom-left
-             hw, -hh, 1.0, 0.0, // bottom-right
-             hw,  hh, 1.0, 1.0, // top-right
+            -hw - ox, -hh - oy, 0.0, 0.0, // bottom-left
+             hw - ox, -hh - oy, 1.0, 0.0, // bottom-right
+             hw - ox,  hh - oy, 1.0, 1.0, // top-right
             // Triangle 2
-            -hw, -hh, 0.0, 0.0, // bottom-left
-             hw,  hh, 1.0, 1.0, // top-right
-            -hw,  hh, 0.0, 1.0, // top-left
+            -hw - ox, -hh - oy, 0.0, 0.0, // bottom-left
+             hw - ox,  hh - oy, 1.0, 1.0, // top-right
+            -hw - ox,  hh - oy, 0.0, 1.0, // top-left
         ];
 
-        let values_per_vertex = 4; // x, y, u, v
+        let values_per_vertex = 4;
 
         let mut geometry = Geometry::new(GL_TRIANGLES);
         geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0, // location 0 in shader: position
-            2, // x, y
-            values_per_vertex as usize,
-            0,
-        ));
-
-        geometry.add_vertex_attribute(Attribute::new(
-            1, // location 1 in shader: texcoord
-            2, // u, v
-            values_per_vertex as usize,
-            2, // offset by 2 floats (x, y)
-        ));
+        geometry.add_vertex_attribute(Attribute::new(0, 2, values_per_vertex as usize, 0));
+        geometry.add_vertex_attribute(Attribute::new(1, 2, values_per_vertex as usize, 2));
 
         geometry
     }
 
-    /// Generate geometry for text rendering
-    /// Creates textured quads for each character using glyph info from the font atlas
-    fn text_geometry(text: &str, font_atlas: &mut FontAtlas) -> Geometry {
+    /// Build raw textured-quad vertices for a string of text and compute the
+    /// bounding box over all glyph quads. Returns `(vertices, bbox_min, bbox_max)`.
+    /// Local origin is the top-left of the text cell (cursor_x = 0, y = 0).
+    fn text_raw_vertices(
+        text: &str,
+        font_atlas: &mut FontAtlas,
+    ) -> (Vec<f32>, (f32, f32), (f32, f32)) {
         let mut vertices: Vec<f32> = Vec::new();
         let mut cursor_x: f32 = 0.0;
-        let baseline_y: f32 = font_atlas.font_size() as f32; // Start from baseline
+        let baseline_y: f32 = font_atlas.font_size() as f32;
+
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        let mut max_x = f32::NEG_INFINITY;
+        let mut max_y = f32::NEG_INFINITY;
 
         for ch in text.chars() {
             if let Some(glyph) = font_atlas.get_glyph(ch) {
-                // Skip rendering for whitespace but advance cursor
                 if glyph.width == 0 || glyph.height == 0 {
                     cursor_x += glyph.advance;
                     continue;
                 }
 
-                // Calculate quad position
                 let x0 = cursor_x + glyph.bearing_x as f32;
-                let y0 = baseline_y - glyph.bearing_y as f32; // Y increases downward in screen coords
+                let y0 = baseline_y - glyph.bearing_y as f32;
                 let x1 = x0 + glyph.width as f32;
                 let y1 = y0 + glyph.height as f32;
 
-                // UV coordinates from font atlas
+                if x0 < min_x { min_x = x0; }
+                if y0 < min_y { min_y = y0; }
+                if x1 > max_x { max_x = x1; }
+                if y1 > max_y { max_y = y1; }
+
                 let u0 = glyph.uv_x;
                 let v0 = glyph.uv_y;
                 let u1 = glyph.uv_x + glyph.uv_width;
                 let v1 = glyph.uv_y + glyph.uv_height;
 
-                // Two triangles per character quad
                 // Triangle 1: bottom-left, bottom-right, top-right
                 vertices.extend_from_slice(&[
-                    x0, y1, u0, v1, // bottom-left
-                    x1, y1, u1, v1, // bottom-right
-                    x1, y0, u1, v0, // top-right
+                    x0, y1, u0, v1,
+                    x1, y1, u1, v1,
+                    x1, y0, u1, v0,
                 ]);
                 // Triangle 2: bottom-left, top-right, top-left
                 vertices.extend_from_slice(&[
-                    x0, y1, u0, v1, // bottom-left
-                    x1, y0, u1, v0, // top-right
-                    x0, y0, u0, v0, // top-left
+                    x0, y1, u0, v1,
+                    x1, y0, u1, v0,
+                    x0, y0, u0, v0,
                 ]);
 
                 cursor_x += glyph.advance;
             }
         }
 
-        let values_per_vertex = 4; // x, y, u, v
+        let (bbox_min, bbox_max) = if min_x.is_finite() {
+            ((min_x, min_y), (max_x, max_y))
+        } else {
+            ((0.0, 0.0), (0.0, 0.0))
+        };
 
-        let mut geometry = Geometry::new(GL_TRIANGLES);
-        geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0, // location 0: position
-            2, // x, y
-            values_per_vertex as usize,
-            0,
-        ));
-
-        geometry.add_vertex_attribute(Attribute::new(
-            1, // location 1: texcoord
-            2, // u, v
-            values_per_vertex as usize,
-            2, // offset by 2 floats
-        ));
-
-        geometry
+        (vertices, bbox_min, bbox_max)
     }
 
+}
+
+/// Builder for `ShapeRenderable` that lets callers override the anchor point
+/// before the mesh is created. Obtained via [`ShapeRenderable::builder`].
+///
+/// ```ignore
+/// let rect = ShapeRenderable::builder(
+///     ShapeKind::Rectangle(Rectangle::new(6.0, 6.0)),
+///     ShapeStyle::fill(Color::white()),
+/// )
+/// .anchor(Anchor::Center)
+/// .build();
+/// ```
+pub struct ShapeRenderableBuilder {
+    shape: ShapeKind,
+    style: ShapeStyle,
+    anchor: Anchor,
+}
+
+impl ShapeRenderableBuilder {
+    /// Set the anchor for the shape. Defaults to `Anchor::Default` if not called.
+    pub fn anchor(mut self, anchor: Anchor) -> Self {
+        self.anchor = anchor;
+        self
+    }
+
+    /// Build the `ShapeRenderable`, consuming the builder.
+    pub fn build(self) -> ShapeRenderable {
+        ShapeRenderable::from_shape_with_anchor(self.shape, self.style, self.anchor)
+    }
 }

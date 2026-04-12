@@ -1,6 +1,8 @@
 mod shaperenderable;
 
+pub use shaperenderable::Anchor;
 pub use shaperenderable::ShapeRenderable;
+pub use shaperenderable::ShapeRenderableBuilder;
 pub use shaperenderable::ShapeStyle;
 pub use shaperenderable::clear_font_cache;
 
@@ -38,6 +40,16 @@ impl MultiPoint {
     pub fn new(points: Vec<(f32, f32)>) -> Self {
         Self { points }
     }
+
+    /// Vertex average of all points. Panics on empty input.
+    pub fn centroid(&self) -> (f32, f32) {
+        let n = self.points.len() as f32;
+        let (sx, sy) = self
+            .points
+            .iter()
+            .fold((0.0f32, 0.0f32), |(sx, sy), (x, y)| (sx + x, sy + y));
+        (sx / n, sy / n)
+    }
 }
 
 
@@ -51,6 +63,14 @@ impl Line {
     pub fn new(start: (f32, f32), end: (f32, f32)) -> Self {
         Self { start, end }
     }
+
+    /// Midpoint of the line.
+    pub fn centroid(&self) -> (f32, f32) {
+        (
+            (self.start.0 + self.end.0) * 0.5,
+            (self.start.1 + self.end.1) * 0.5,
+        )
+    }
 }
 
 #[derive(Clone)]
@@ -62,6 +82,16 @@ impl Polyline {
     pub fn new(points: Vec<(f32, f32)>) -> Self {
         Self { points }
     }
+
+    /// Vertex average of the polyline's points. Panics on empty input.
+    pub fn centroid(&self) -> (f32, f32) {
+        let n = self.points.len() as f32;
+        let (sx, sy) = self
+            .points
+            .iter()
+            .fold((0.0f32, 0.0f32), |(sx, sy), (x, y)| (sx + x, sy + y));
+        (sx / n, sy / n)
+    }
 }
 #[derive(Clone, Copy)]
 pub struct Triangle {
@@ -71,6 +101,12 @@ pub struct Triangle {
 impl Triangle {
     pub fn new(vertices: [(f32, f32); 3]) -> Self {
         Self { vertices }
+    }
+
+    /// Geometric centroid: `(v0 + v1 + v2) / 3`.
+    pub fn centroid(&self) -> (f32, f32) {
+        let [a, b, c] = self.vertices;
+        ((a.0 + b.0 + c.0) / 3.0, (a.1 + b.1 + c.1) / 3.0)
     }
 }
 
@@ -108,6 +144,45 @@ pub struct Polygon {
 impl Polygon {
     pub fn new(points: Vec<(f32, f32)>) -> Self {
         Self { points }
+    }
+
+    /// Area centroid of the polygon (the geometric "balance point").
+    ///
+    /// Computed via the shoelace-based centroid formula for a simple polygon.
+    /// For concave polygons the centroid may lie outside the polygon itself
+    /// (e.g. in the notch of an L-shape) — that is mathematically correct.
+    ///
+    /// Degenerate inputs (fewer than 3 points, or zero signed area from
+    /// collinear points) fall back to the plain vertex average.
+    pub fn centroid(&self) -> (f32, f32) {
+        let n = self.points.len();
+        if n < 3 {
+            return Self::vertex_average(&self.points);
+        }
+        let mut cx = 0.0f32;
+        let mut cy = 0.0f32;
+        let mut signed_area_sum = 0.0f32;
+        for i in 0..n {
+            let (x0, y0) = self.points[i];
+            let (x1, y1) = self.points[(i + 1) % n];
+            let cross = x0 * y1 - x1 * y0;
+            cx += (x0 + x1) * cross;
+            cy += (y0 + y1) * cross;
+            signed_area_sum += cross;
+        }
+        let area = signed_area_sum * 0.5;
+        if area.abs() < f32::EPSILON {
+            return Self::vertex_average(&self.points);
+        }
+        (cx / (6.0 * area), cy / (6.0 * area))
+    }
+
+    fn vertex_average(points: &[(f32, f32)]) -> (f32, f32) {
+        let n = points.len() as f32;
+        let (sx, sy) = points
+            .iter()
+            .fold((0.0f32, 0.0f32), |(sx, sy), (x, y)| (sx + x, sy + y));
+        (sx / n, sy / n)
     }
 
     /// Signed area of the polygon (shoelace formula).
