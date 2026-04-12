@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.11.0] - 2026-04-12
+
+### Breaking Changes
+
+- **Line** normalizes its mesh so the start point sits at local (0, 0). Previously start/end were baked as absolute world coordinates, so `set_position` was an additive offset and rotation/scale pivoted around the world origin. Lines constructed with absolute coordinates and then `set_position`'d will render at different positions — migrate by constructing at origin and using `set_position` for placement.
+- **Arc** now anchors at its circle center instead of the first perimeter point. `set_position(cx, cy)` places the center at `(cx, cy)`.
+- **Triangle** default anchor is now its centroid. Symmetric triangles centered at origin (e.g., waypoint glyphs) are unaffected.
+- **`rounded_rectangle_geometry`** and **`image_geometry`** public functions now take `(ox, oy)` offset parameters.
+
+### Added
+
+- **Configurable anchor system.** New `Anchor` enum (Default, Center, TopLeft, TopRight, BottomLeft, BottomRight, Top, Bottom, Left, Right, Custom) and `ShapeRenderableBuilder` let users control which point on a shape is used for positioning, rotation, and scaling:
+  ```rust
+  ShapeRenderable::builder(shape, style)
+      .anchor(Anchor::Center)
+      .build()
+  ```
+  `from_shape()` continues to work unchanged (uses `Anchor::Default`).
+
+- **Centroid helpers** on `Line` (midpoint), `Triangle` (vertex average), `MultiPoint` (vertex average), `Polyline` (vertex average), and `Polygon` (area centroid via shoelace formula).
+
+### Fixed
+
+- Line, Arc, and Triangle rotation/scale now pivot around a meaningful point on the shape instead of the world origin or an arbitrary perimeter point.
+
+### Documentation
+
+- `SHAPE_API_REVIEW.md` Section 1 rewritten with corrected per-shape anchor table, shader-level explanation, and corrected entries for Line, Triangle, Arc, and Text.
+
 ## [0.9.0] - 2026-04-05
 
 ### Breaking Changes
