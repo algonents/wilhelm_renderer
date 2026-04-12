@@ -27,8 +27,7 @@ fn main() {
         ShapeKind::Circle(Circle::new(BALL_RADIUS)),
         ShapeStyle {
             fill: Some(Color::from_rgb(0.254902, 0.411765, 0.882353)),
-            stroke_color: None,
-            stroke_width: None,
+            ..Default::default()
         },
     );
     dots.create_multiple_instances(balls.len());

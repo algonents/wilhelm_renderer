@@ -111,6 +111,7 @@ pub struct ShapeStyle {
     pub fill: Option<Color>,
     pub stroke_color: Option<Color>,
     pub stroke_width: Option<f32>,
+    pub dash_pattern: Option<(f32, f32)>,
 }
 
 impl Default for ShapeStyle {
@@ -119,6 +120,7 @@ impl Default for ShapeStyle {
             fill: Some(Color::from_rgb(1.0, 1.0, 1.0)),
             stroke_color: None,
             stroke_width: None,
+            dash_pattern: None,
         }
     }
 }
@@ -129,6 +131,7 @@ impl ShapeStyle {
             fill: Some(fill),
             stroke_color: None,
             stroke_width: None,
+            dash_pattern: None,
         }
     }
 
@@ -137,6 +140,7 @@ impl ShapeStyle {
             fill: None,
             stroke_color: Some(color),
             stroke_width: Some(width),
+            dash_pattern: None,
         }
     }
 
@@ -145,7 +149,22 @@ impl ShapeStyle {
             fill: Some(fill),
             stroke_color: Some(stroke),
             stroke_width: Some(width),
+            dash_pattern: None,
         }
+    }
+
+    pub fn dashed_stroke(color: Color, width: f32, dash: f32, gap: f32) -> Self {
+        Self {
+            fill: None,
+            stroke_color: Some(color),
+            stroke_width: Some(width),
+            dash_pattern: Some((dash, gap)),
+        }
+    }
+
+    pub fn with_dash(mut self, dash: f32, gap: f32) -> Self {
+        self.dash_pattern = Some((dash, gap));
+        self
     }
 }
 
@@ -161,6 +180,24 @@ fn default_shader() -> Rc<Shader> {
             Rc::new(
                 Shader::compile(vert_src, frag_src, None)
                     .expect("Failed to compile default shader"),
+            )
+        })
+        .clone()
+    })
+}
+
+thread_local! {
+    static DASHED_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
+}
+
+fn dashed_shader() -> Rc<Shader> {
+    DASHED_SHADER.with(|cell| {
+        cell.get_or_init(|| {
+            let vert_src = include_str!("../shaders/dashed.vert");
+            let frag_src = include_str!("../shaders/dashed.frag");
+            Rc::new(
+                Shader::compile(vert_src, frag_src, None)
+                    .expect("Failed to compile dashed shader"),
             )
         })
         .clone()
@@ -402,12 +439,14 @@ impl ShapeRenderable {
                 style.stroke_color.unwrap_or_else(Color::white),
                 style.stroke_width.unwrap_or(1.0),
                 anchor,
+                style.dash_pattern,
             ),
             ShapeKind::Polyline(poly_line) => ShapeRenderable::polyline(
                 poly_line,
                 style.stroke_color.unwrap_or(Color::white()),
                 style.stroke_width.unwrap_or(1.0),
                 anchor,
+                style.dash_pattern,
             ),
             ShapeKind::Triangle(triangle) => ShapeRenderable::triangle(
                 triangle,
@@ -421,12 +460,14 @@ impl ShapeRenderable {
                     stroke,
                     style.stroke_width.unwrap_or(1.0),
                     anchor,
+                    style.dash_pattern,
                 ),
                 (None, Some(stroke)) => ShapeRenderable::rectangle_outline(
                     rect,
                     stroke,
                     style.stroke_width.unwrap_or(1.0),
                     anchor,
+                    style.dash_pattern,
                 ),
                 (fill, None) => ShapeRenderable::rectangle(
                     rect,
@@ -459,6 +500,7 @@ impl ShapeRenderable {
                 style.stroke_color.unwrap_or(Color::white()),
                 style.stroke_width.unwrap_or(1.0),
                 anchor,
+                style.dash_pattern,
             ),
             ShapeKind::Image(_) => {
                 unimplemented!("ShapeRenderable::from_shape cannot create Image without path")
@@ -535,7 +577,7 @@ impl ShapeRenderable {
         s
     }
 
-    fn line(shape: Line, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
+    fn line(shape: Line, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
         let (x1, y1) = shape.start;
         let (x2, y2) = shape.end;
         let bbox_min = (x1.min(x2), y1.min(y2));
@@ -543,9 +585,15 @@ impl ShapeRenderable {
         let default = (x1, y1); // start point
         let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
 
-        let geometry =
-            ShapeRenderable::line_geometry(x1 - ax, y1 - ay, x2 - ax, y2 - ay, stroke_width);
-        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
+        let (geometry, shader) = if let Some(_) = dash_pattern {
+            (ShapeRenderable::line_geometry_dashed(x1 - ax, y1 - ay, x2 - ax, y2 - ay, stroke_width), dashed_shader())
+        } else {
+            (ShapeRenderable::line_geometry(x1 - ax, y1 - ay, x2 - ax, y2 - ay, stroke_width), default_shader())
+        };
+        let mut mesh = Mesh::with_color(shader, geometry, Some(stroke));
+        if let Some((dash, gap)) = dash_pattern {
+            mesh.dash_pattern = Some((dash, gap));
+        }
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Line(shape));
         s.x = ax;
@@ -553,7 +601,7 @@ impl ShapeRenderable {
         s
     }
 
-    fn polyline(polyline: Polyline, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
+    fn polyline(polyline: Polyline, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
         assert!(polyline.points.len() >= 2, "Polyline requires at least two points");
 
         let (bbox_min, bbox_max) = bbox_of_points(&polyline.points);
@@ -566,8 +614,15 @@ impl ShapeRenderable {
             .map(|(px, py)| (px - ax, py - ay))
             .collect();
 
-        let geometry = ShapeRenderable::polyline_geometry(&rel_points, stroke_width);
-        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
+        let (geometry, shader) = if let Some(_) = dash_pattern {
+            (ShapeRenderable::polyline_geometry_dashed(&rel_points, stroke_width), dashed_shader())
+        } else {
+            (ShapeRenderable::polyline_geometry(&rel_points, stroke_width), default_shader())
+        };
+        let mut mesh = Mesh::with_color(shader, geometry, Some(stroke));
+        if let Some((dash, gap)) = dash_pattern {
+            mesh.dash_pattern = Some((dash, gap));
+        }
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Polyline(polyline));
         s.x = ax;
@@ -575,7 +630,7 @@ impl ShapeRenderable {
         s
     }
 
-    fn arc(arc: ArcShape, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
+    fn arc(arc: ArcShape, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
         use std::f32::consts::TAU;
 
         let segments = 64;
@@ -603,8 +658,15 @@ impl ShapeRenderable {
 
         let shifted: Vec<(f32, f32)> =
             points.iter().map(|(x, y)| (x - ax, y - ay)).collect();
-        let geometry = ShapeRenderable::polyline_geometry(&shifted, stroke_width);
-        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
+        let (geometry, shader) = if let Some(_) = dash_pattern {
+            (ShapeRenderable::polyline_geometry_dashed(&shifted, stroke_width), dashed_shader())
+        } else {
+            (ShapeRenderable::polyline_geometry(&shifted, stroke_width), default_shader())
+        };
+        let mut mesh = Mesh::with_color(shader, geometry, Some(stroke));
+        if let Some((dash, gap)) = dash_pattern {
+            mesh.dash_pattern = Some((dash, gap));
+        }
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Arc(arc));
         s.x = ax;
@@ -644,20 +706,31 @@ impl ShapeRenderable {
         s
     }
 
-    fn rectangle_outline(rect: Rectangle, stroke: Color, stroke_width: f32, anchor: Anchor) -> Self {
+    fn rectangle_outline(rect: Rectangle, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
         let (ax, ay) = rectangle_anchor(rect.width, rect.height, anchor);
         // Closed polyline in the same local frame as the fill, shifted by anchor.
-        let points = vec![
+        // The direction hint (6th point) retraces the top edge for a proper miter join.
+        // For dashed lines, skip it — the overlap would fill in the gaps on the top edge.
+        let mut points = vec![
             (0.0 - ax, 0.0 - ay),
             (rect.width - ax, 0.0 - ay),
             (rect.width - ax, rect.height - ay),
             (0.0 - ax, rect.height - ay),
             (0.0 - ax, 0.0 - ay),                // close the loop
-            (rect.width - ax, 0.0 - ay),         // direction hint for join at closing corner
         ];
+        if dash_pattern.is_none() {
+            points.push((rect.width - ax, 0.0 - ay)); // direction hint for join at closing corner
+        }
 
-        let geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
-        let mesh = Mesh::with_color(default_shader(), geometry, Some(stroke));
+        let (geometry, shader) = if let Some(_) = dash_pattern {
+            (ShapeRenderable::polyline_geometry_dashed(&points, stroke_width), dashed_shader())
+        } else {
+            (ShapeRenderable::polyline_geometry(&points, stroke_width), default_shader())
+        };
+        let mut mesh = Mesh::with_color(shader, geometry, Some(stroke));
+        if let Some((dash, gap)) = dash_pattern {
+            mesh.dash_pattern = Some((dash, gap));
+        }
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Rectangle(rect));
         s.x = ax;
@@ -671,22 +744,32 @@ impl ShapeRenderable {
         stroke: Color,
         stroke_width: f32,
         anchor: Anchor,
+        dash_pattern: Option<(f32, f32)>,
     ) -> Self {
         let (ax, ay) = rectangle_anchor(rect.width, rect.height, anchor);
 
         let fill_geometry = ShapeRenderable::rectangle_geometry(rect.width, rect.height, ax, ay);
         let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
 
-        let points = vec![
+        let mut points = vec![
             (0.0 - ax, 0.0 - ay),
             (rect.width - ax, 0.0 - ay),
             (rect.width - ax, rect.height - ay),
             (0.0 - ax, rect.height - ay),
             (0.0 - ax, 0.0 - ay),
-            (rect.width - ax, 0.0 - ay),
         ];
-        let stroke_geometry = ShapeRenderable::polyline_geometry(&points, stroke_width);
-        let stroke_mesh = Mesh::with_color(default_shader(), stroke_geometry, Some(stroke));
+        if dash_pattern.is_none() {
+            points.push((rect.width - ax, 0.0 - ay));
+        }
+        let (stroke_geometry, shader) = if let Some(_) = dash_pattern {
+            (ShapeRenderable::polyline_geometry_dashed(&points, stroke_width), dashed_shader())
+        } else {
+            (ShapeRenderable::polyline_geometry(&points, stroke_width), default_shader())
+        };
+        let mut stroke_mesh = Mesh::with_color(shader, stroke_geometry, Some(stroke));
+        if let Some((dash, gap)) = dash_pattern {
+            stroke_mesh.dash_pattern = Some((dash, gap));
+        }
 
         let mut s = ShapeRenderable::new_with_stroke(
             fill_mesh,
@@ -1014,6 +1097,161 @@ impl ShapeRenderable {
         let mut geometry = Geometry::new(GL_TRIANGLES);
         geometry.add_buffer(&vertices, 2);
         geometry.add_vertex_attribute(Attribute::new(0, 2, 2, 0));
+        geometry
+    }
+
+    fn line_geometry_dashed(
+        x1: GLfloat,
+        y1: GLfloat,
+        x2: GLfloat,
+        y2: GLfloat,
+        stroke_width: f32,
+    ) -> Geometry {
+        let stroke_width = stroke_width.max(MIN_STROKE_WIDTH);
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let length = (dx * dx + dy * dy).sqrt();
+
+        if length == 0.0 {
+            return Geometry::new(GL_TRIANGLES);
+        }
+
+        let nx = -dy / length;
+        let ny = dx / length;
+        let half_thickness = stroke_width / 2.0;
+
+        let ox = nx * half_thickness;
+        let oy = ny * half_thickness;
+
+        // Four corners with distance: start=0, end=length
+        // Layout: x, y, dist per vertex
+        let vertices: Vec<GLfloat> = vec![
+            x1 - ox, y1 - oy, 0.0,
+            x2 - ox, y2 - oy, length,
+            x2 + ox, y2 + oy, length,
+            x2 + ox, y2 + oy, length,
+            x1 + ox, y1 + oy, 0.0,
+            x1 - ox, y1 - oy, 0.0,
+        ];
+
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, 3);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, 3, 0)); // vec2 position
+        geometry.add_vertex_attribute(Attribute::new(3, 1, 3, 2)); // float distance
+        geometry
+    }
+
+    fn polyline_geometry_dashed(points: &[(GLfloat, GLfloat)], stroke_width: f32) -> Geometry {
+        const MITER_LIMIT: f32 = 4.0;
+
+        if points.len() < 2 {
+            return Geometry::new(GL_TRIANGLES);
+        }
+
+        let half_thickness = stroke_width.max(1.0) / 2.0;
+        let miter_limit_squared = (stroke_width * MITER_LIMIT).powi(2) / 4.0;
+        let mut vertices: Vec<GLfloat> = Vec::new();
+
+        // Pre-compute cumulative distances
+        let mut cum_dist = vec![0.0f32; points.len()];
+        for i in 1..points.len() {
+            let dx = points[i].0 - points[i - 1].0;
+            let dy = points[i].1 - points[i - 1].1;
+            cum_dist[i] = cum_dist[i - 1] + (dx * dx + dy * dy).sqrt();
+        }
+
+        let mut a = points[0];
+        let mut b = points[1];
+        let mut a_idx = 0usize;
+        let mut b_idx = 1usize;
+
+        let mut idx = 1;
+        while idx < points.len() && (b.0 - a.0).hypot(b.1 - a.1) == 0.0 {
+            idx += 1;
+            if idx < points.len() {
+                b = points[idx];
+                b_idx = idx;
+            }
+        }
+        if (b.0 - a.0).hypot(b.1 - a.1) == 0.0 {
+            return Geometry::new(GL_TRIANGLES);
+        }
+
+        for i in idx + 1..=points.len() {
+            let c = if i < points.len() { points[i] } else { a };
+
+            let ab = (b.0 - a.0, b.1 - a.1);
+            let len_ab = (ab.0 * ab.0 + ab.1 * ab.1).sqrt();
+            let normal_ab = (
+                -ab.1 / len_ab * half_thickness,
+                ab.0 / len_ab * half_thickness,
+            );
+
+            let a1 = (a.0 + normal_ab.0, a.1 + normal_ab.1);
+            let a2 = (a.0 - normal_ab.0, a.1 - normal_ab.1);
+            let b1 = (b.0 + normal_ab.0, b.1 + normal_ab.1);
+            let b2 = (b.0 - normal_ab.0, b.1 - normal_ab.1);
+
+            let da = cum_dist[a_idx];
+            let db = cum_dist[b_idx];
+
+            // segment quad with distance
+            vertices.extend_from_slice(&[
+                a1.0, a1.1, da, a2.0, a2.1, da, b1.0, b1.1, db,
+                a2.0, a2.1, da, b1.0, b1.1, db, b2.0, b2.1, db,
+            ]);
+
+            let bc = (c.0 - b.0, c.1 - b.1);
+            let len_bc = (bc.0 * bc.0 + bc.1 * bc.1).sqrt();
+            if len_bc > 0.0 {
+                let normal_bc = (
+                    -bc.1 / len_bc * half_thickness,
+                    bc.0 / len_bc * half_thickness,
+                );
+                let b3 = (b.0 + normal_bc.0, b.1 + normal_bc.1);
+                let b4 = (b.0 - normal_bc.0, b.1 - normal_bc.1);
+
+                let z = ab.0 * bc.1 - ab.1 * bc.0;
+
+                // bevel join — all vertices at junction distance
+                if z < 0.0 {
+                    vertices.extend_from_slice(&[b.0, b.1, db, b1.0, b1.1, db, b3.0, b3.1, db]);
+                } else if z > 0.0 {
+                    vertices.extend_from_slice(&[b.0, b.1, db, b2.0, b2.1, db, b4.0, b4.1, db]);
+                }
+
+                // optional miter
+                if z != 0.0 {
+                    let (a_j, b_j, norm_j) = if z < 0.0 { (a1, b3, ab) } else { (a2, b4, ab) };
+
+                    let denom = z;
+                    let alpha = (bc.1 * (b_j.0 - a_j.0) + bc.0 * (a_j.1 - b_j.1)) / denom;
+                    let mx = a_j.0 + alpha * norm_j.0;
+                    let my = a_j.1 + alpha * norm_j.1;
+
+                    let dist2 = (mx - b.0).powi(2) + (my - b.1).powi(2);
+                    if dist2 <= miter_limit_squared {
+                        if z < 0.0 {
+                            vertices.extend_from_slice(&[mx, my, db, b1.0, b1.1, db, b3.0, b3.1, db]);
+                        } else {
+                            vertices.extend_from_slice(&[mx, my, db, b2.0, b2.1, db, b4.0, b4.1, db]);
+                        }
+                    }
+                }
+            }
+
+            a = b;
+            a_idx = b_idx;
+            b = c;
+            if i < points.len() {
+                b_idx = i;
+            }
+        }
+
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, 3);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, 3, 0)); // vec2 position
+        geometry.add_vertex_attribute(Attribute::new(3, 1, 3, 2)); // float distance
         geometry
     }
 

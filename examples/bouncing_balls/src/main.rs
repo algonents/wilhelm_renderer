@@ -35,8 +35,7 @@ fn main() {
                             rand_f32(&mut rng),
                             rand_f32(&mut rng),
                         )),
-                        stroke_color: None,
-                        stroke_width: None,
+                        ..Default::default()
                     },
                 )
             })
