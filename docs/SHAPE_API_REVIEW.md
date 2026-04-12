@@ -4,7 +4,7 @@ A comprehensive analysis of inconsistencies, unintuitive behaviors, and improvem
 
 ---
 
-## 1. Anchor Point Inconsistencies
+## 1. Anchor Points
 
 ### How anchors work at the shader level
 
@@ -21,113 +21,70 @@ Consequences:
 - `set_position(x, y)` writes `u_screen_offset` only; it does not move geometry relative to the shape.
 - The behavior of every shape is therefore determined by one question: *where is (0, 0) in the mesh it builds?*
 
-### Summary: anchor / rotation pivot / scale origin (corrected)
+### Default anchors per shape
 
-Because of the shader, all three columns are always identical. What differs is *where that shared point lies on the shape.*
-
-| Shape | Anchor Point | Rotation Pivot | Scale Origin |
-|-------|-------------|----------------|--------------|
+| Shape | Default Anchor | Rotation Pivot | Scale Origin |
+|-------|---------------|----------------|--------------|
 | Point | The point itself | N/A | N/A |
 | MultiPoint | First point | First point | First point |
+| Line | Start point | Start point | Start point |
 | Polyline | First point | First point | First point |
 | Polygon | First vertex | First vertex | First vertex |
+| Triangle | Centroid | Centroid | Centroid |
 | Circle | Center | Center | Center |
 | Ellipse | Center | Center | Center |
 | Image | Center | Center | Center |
-| Rectangle | Bottom-left corner (top-left visually under Y-down) | Same | Same |
+| Arc | Circle center | Circle center | Circle center |
+| Rectangle | Top-left corner (Y-down screen space) | Same | Same |
 | RoundedRectangle | Same as Rectangle | Same | Same |
-| **Line** | **World origin** (vertices baked absolute) | **World origin** | **World origin** |
-| **Triangle** | **World origin** (vertices baked absolute) | **World origin** | **World origin** |
-| **Arc** | **First perimeter point** (not the arc center) | **First perimeter point** | **First perimeter point** |
-| **Text** | **Top-left of text cell** (not the baseline) | N/A | N/A |
+| Text | Top-left of text cell | N/A | N/A |
 
-### Per-shape anchors (ground truth from the code)
+### Configurable anchors (v0.11.0)
 
-| Shape | Local (0,0) location | Status |
-|-------|----------------------|--------|
-| Point | The point itself (vertex `[0,0]`) | OK |
-| MultiPoint | First point (all points shifted by `-points[0]`, `s.x/y = points[0]`) | OK |
-| Polyline | First point (same pattern as MultiPoint) | OK |
-| Polygon | First polygon vertex (same pattern) | OK |
-| Circle | Center | OK |
-| Ellipse | Center | OK |
-| Image | Center (geometry built with `-hw..+hw`, `-hh..+hh`) | OK |
-| Rectangle | Bottom-left corner of the quad (visually top-left under a Y-down projection) | OK, but differs from Circle/Ellipse/Image |
-| RoundedRectangle | Same corner as Rectangle. The fan's center vertex at `(w/2, h/2)` is just a fan seed, **not** the pivot | OK, but differs from Circle/Ellipse/Image |
-| **Line** | **World origin** — `line_geometry` bakes absolute `(x1,y1)`/`(x2,y2)` into the vertex buffer; `s.x/y` default to 0 | **Bug** |
-| **Triangle** | **World origin** — vertices baked as-is with no normalization; `s.x/y` default to 0 | **Bug** |
-| **Arc** | **First perimeter point** — `arc()` builds points around the arc's center, then `polyline_from_points` subtracts `points[0]`, which is the *starting edge point*, not the center | **Bug** |
-| **Text** | **Top-left of the text cell**, not the baseline — `baseline_y = font_size`, so local `y=0` is `font_size` pixels above the baseline | Doc was wrong; may also want to revisit |
-
-### Three levels of inconsistency
-
-1. **Closed shapes split three ways.** Circle/Ellipse/Image anchor at the center; Rectangle/RoundedRectangle anchor at a corner; Polygon anchors at its first vertex.
-2. **Vertex-defined shapes split two ways.** Polyline and Polygon normalize to their first point (rotating around that point is at least usable). Line and Triangle do **not** normalize at all — they bake world-space vertex coordinates into the mesh, so rotation and scale pivot around the world origin, not the shape. A Triangle positioned near `(100, 100)` rotates around `(0, 0)`, sweeping across the scene.
-3. **Arc is broken independently of all of the above.** `set_position(cx, cy)` does not place the arc's center at `(cx, cy)`, and rotation does not spin the arc around its own center — both are offset by the arc's first edge point.
-
-### Impact
-
-- Scaling a Rectangle at `(50, 50)` with `scale = 2` grows it from the corner; scaling a Circle at the same position grows it symmetrically. Users must memorize each shape's anchor to predict transforms.
-- Rotating a Line or Triangle is effectively unusable unless the shape is constructed at the world origin and positioned via `set_position()` afterwards (the workaround `sky_guard_client` already uses for other reasons, see Section 2).
-- Rotating an Arc around its "center" requires pre-computing the offset from the first edge point and applying it manually — non-obvious and undocumented.
-
-### Recommendation
-
-Treat this in two passes:
-
-1. **Fix the bugs first, independent of any API change.** Line, Triangle, and Arc should normalize their geometry the same way Polyline/Polygon already do (compute a local origin, shift vertices by `-origin`, store the origin in `s.x/s.y`). This alone makes rotation and scale work predictably for those shapes without changing any public API.
-2. **Then consider a configurable `Origin` enum** for shapes where users legitimately want a choice (e.g., Rectangle corner vs. center). Default to current post-fix behavior to stay non-breaking; opt in for uniform behavior.
+Users can override the default anchor via the builder API:
 
 ```rust
-pub enum Origin {
-    Center,
-    TopLeft,
-    // Current default varies by shape
-}
+ShapeRenderable::builder(shape, style)
+    .anchor(Anchor::Center)
+    .build()
 ```
+
+Available anchors: `Default`, `Center`, `TopLeft`, `TopRight`, `BottomLeft`, `BottomRight`, `Top`, `Bottom`, `Left`, `Right`, `Custom(f32, f32)`.
+
+All variants resolve against the shape's axis-aligned bounding box. `Custom(x, y)` specifies an arbitrary point in local coordinates. `Default` preserves the per-shape natural anchor listed above.
+
+### Remaining inconsistency
+
+Closed shapes still split two ways on their *default*: Circle/Ellipse/Image/Arc default to center; Rectangle/RoundedRectangle default to top-left. This is intentional — both conventions are common and the `Anchor` enum lets users override.
+
+### Centroid helpers
+
+`centroid()` methods are available on `Line` (midpoint), `Triangle` (vertex average), `MultiPoint` (vertex average), `Polyline` (vertex average), and `Polygon` (area centroid via shoelace formula). These can be used with `Anchor::Custom(centroid.0, centroid.1)`.
 
 ---
 
 ## 2. Redundant Position for Vertex-Defined Shapes
 
-Line, Triangle, Polygon, and Polyline define their geometry with explicit vertices, making the `(x, y)` position parameter redundant or confusing:
+*Resolved in v0.9.0.* The `(x, y)` position parameter was removed from `from_shape()` and `image()` / `image_with_size()`. All shapes default to position (0, 0) and are placed via `set_position()`.
 
-- **Line**: `(x, y)` is added to both `start` and `end` — double bookkeeping
-- **Polygon/Polyline**: Points are made absolute with `(x, y)`, then re-anchored to first point
-- **Triangle**: `(x, y)` is an offset applied to all vertices
-
-sky_guard_client works around this by creating shapes at `(0.0, 0.0)` and using `set_position()` separately.
-
-**Recommendation:** Document the convention clearly. Consider allowing vertex-defined shapes to accept absolute coordinates with `(x, y)` = `(0, 0)` as the intended usage.
+For vertex-defined shapes (Line, Polyline, Polygon, MultiPoint), the constructor normalizes geometry to the default anchor and stores the anchor's input-space position in `s.x/s.y`, so the shape renders in place without requiring `set_position()`. Users who want a different placement call `set_position()` explicitly.
 
 ---
 
-## 3. No Style Mutation After Construction
+## 3. Style Mutation
 
-Shapes can only be styled at creation time via `ShapeStyle`. After construction:
-- `set_position()` — exists
-- `set_scale()` — exists
-- `set_rotation()` — exists
-- `set_color()` — **missing**
-- `set_stroke_color()` — **missing**
-- `set_stroke_width()` — **missing**
+*Resolved in v0.9.0.* Style mutators added:
+- `set_fill_color(color)` — change fill color at any time
+- `set_stroke_color(color)` — change stroke color at any time
+- `fill_color()` and `stroke_color()` getters
 
-To change color, the entire shape must be rebuilt.
-
-**Recommendation:** Add style mutators:
-```rust
-fn set_fill_color(&mut self, color: Color)
-fn set_stroke_color(&mut self, color: Color)
-fn set_stroke_width(&mut self, width: f32)
-```
+`set_stroke_width()` is not supported because stroke width affects geometry (requires a rebuild).
 
 ---
 
-## 4. Missing Position Getters
+## 4. Position Getters
 
-`scale()` and `rotation()` getters exist, but there are no `x()` or `y()` getters. Users must track position externally.
-
-**Recommendation:** Add `x()`, `y()`, and `position() -> (f32, f32)` getters.
+*Resolved in v0.9.0.* Added `x()`, `y()`, and `position() -> (f32, f32)` getters.
 
 ---
 
@@ -137,31 +94,25 @@ fn set_stroke_width(&mut self, width: f32)
 - Line geometry: uses `stroke_width.max(MIN_STROKE_WIDTH)` constant
 - Polyline geometry: uses `stroke_width.max(1.0)` — hardcoded, not using the constant
 
-**Recommendation:** Use `MIN_STROKE_WIDTH` constant consistently.
+**Status:** Open. Use `MIN_STROKE_WIDTH` constant consistently.
 
 ### 5.2 Stroke Support Varies by Shape
 - **Rectangle**: fill, stroke, fill+stroke — all supported
 - **Circle, Ellipse, Polygon, RoundedRectangle, Triangle**: fill only (stroke noted as TODO in ROADMAP.md)
 - **Line, Polyline, Arc**: stroke only (inherently stroke-based)
 
-**Recommendation:** Continue stroke rollout per ROADMAP Phase 2.5.
+**Status:** Open. Continue stroke rollout per ROADMAP.
 
 ### 5.3 No Style for (None, None)
 `ShapeStyle` with `fill: None, stroke_color: None` silently defaults to white fill. No way to create an invisible shape.
+
+**Status:** Open.
 
 ---
 
 ## 6. Color and Alpha
 
-### 6.1 No Alpha Channel
-`Color::from_rgb()` hardcodes alpha to 1.0. No `Color::from_rgba()` exists.
-
-### 6.2 Renderer Color Handling
-- `geometryColor` uniform is RGB only (vec3, `gl_uniform_3f`)
-- `u_color` uniform is RGBA but alpha is hardcoded to 1.0
-- Per-instance color (attribute 2) supports RGBA
-
-**Recommendation:** Add `Color::from_rgba()` and propagate alpha through the uniform pipeline.
+*Resolved in v0.9.0.* `Color::from_rgba()`, `Color::from_hsl()`, and `Color::from_hsla()` added. Alpha propagates through the full rendering pipeline (uniforms, per-instance attributes, fragment shaders).
 
 ---
 
@@ -171,7 +122,7 @@ fn set_stroke_width(&mut self, width: f32)
 When `instance_count > 0`, the shape's `(self.x, self.y)` is ignored — positions come entirely from `set_instance_positions()`. This is a silent contract.
 
 ### 7.2 No Per-Instance Scale or Rotation
-All instances share the same `u_scale` and `u_rotation` uniforms. Per-instance scale/rotation would require shader attribute additions (noted in ROADMAP Phase 6).
+All instances share the same `u_scale` and `u_rotation` uniforms. Per-instance scale/rotation would require shader attribute additions (noted in ROADMAP).
 
 ### 7.3 Color Updates Are Split
 - `set_instance_colors()` — updates fill mesh only
@@ -182,30 +133,11 @@ Users must call both for fill+stroke shapes and track which shapes have stroke.
 ### 7.4 Fixed Capacity
 `create_multiple_instances(capacity)` sets capacity upfront. No way to grow dynamically.
 
----
-
-## 8. SVG Export Bugs
-
-### Circle and Ellipse SVG positions are wrong:
-```rust
-// Circle SVG (line 1136) — adds radius to position
-cx = self.x + circle.radius
-cy = self.y + circle.radius
-```
-
-But rendering treats `(self.x, self.y)` as center, not top-left. The SVG output places the circle at the wrong position.
-
-Same issue for Ellipse.
-
-### Missing SVG implementations:
-- Image: unimplemented
-- Arc: unimplemented
-
-**Recommendation:** Fix Circle/Ellipse SVG to use `self.x, self.y` directly as center. Implement missing SVG exports.
+**Status:** All open.
 
 ---
 
-## 9. Geometry Construction Details
+## 8. Geometry Construction Details
 
 ### Mixed GL Primitives
 | Shape | GL Mode | Vertex Count |
@@ -213,42 +145,40 @@ Same issue for Ellipse.
 | Point, MultiPoint | GL_POINTS | 1 per point |
 | Line, Polyline, Arc | GL_TRIANGLES | 6 per segment (quad) |
 | Rectangle | GL_TRIANGLE_STRIP | 4 |
-| Circle, Ellipse, RoundedRectangle, Polygon | GL_TRIANGLE_FAN | varies |
+| Circle, Ellipse, RoundedRectangle | GL_TRIANGLE_FAN | varies |
+| Polygon | GL_TRIANGLES | 6 per ear-clipped triangle |
 | Triangle, Image, Text | GL_TRIANGLES | 6 (2 triangles) |
 
-Not inherently a problem, but affects future batching (Strategy B in ROADMAP) since GL modes can't be mixed in a single draw call.
-
-### Polygon only supports convex shapes
-`Polygon` uses `GL_TRIANGLE_FAN`, which only renders correctly for convex polygons. Concave polygons produce incorrect geometry because triangle fan assumes all triangles share a common vertex. Supporting concave polygons requires triangulation (e.g., ear clipping algorithm) before uploading vertices to the GPU.
+Not inherently a problem, but affects future batching since GL modes can't be mixed in a single draw call.
 
 ### Hardcoded Quality Parameters
-- Circle: 64 segments (hardcoded)
+- Circle: 100 segments (hardcoded)
 - Arc: 64 segments (hardcoded)
 - RoundedRectangle: 8 segments per corner (hardcoded)
 - Polyline miter limit: 4.0 (hardcoded)
 
 No way for users to control quality vs performance tradeoff.
 
+**Status:** Open.
+
 ---
 
-## 10. Summary: Priority Improvements
+## 9. Summary: Priority Improvements
 
-### Non-Breaking (additive):
-- [x] Add position getters: `x()`, `y()`, `position()`
-- [x] Add style mutators: `set_fill_color()`, `set_stroke_color()` — done (stroke_width requires geometry rebuild, not added)
-- [x] Add `Color::from_rgba()` — done, plus `Color::from_hsl()` and `Color::from_hsla()`
-- [ ] Add `Origin` enum for configurable anchor points (default to current behavior)
-- [ ] Fix Circle/Ellipse SVG export
+### Resolved:
+- [x] Add position getters: `x()`, `y()`, `position()` — v0.9.0
+- [x] Add style mutators: `set_fill_color()`, `set_stroke_color()` — v0.9.0
+- [x] Add `Color::from_rgba()`, `Color::from_hsl()`, `Color::from_hsla()` — v0.9.0
+- [x] Alpha channel throughout rendering pipeline — v0.9.0
+- [x] Standardize anchor points — v0.9.0 (removed `(x, y)` from construction)
+- [x] Fix Line/Arc/Triangle anchor bugs — v0.11.0
+- [x] Add configurable `Anchor` enum and `ShapeRenderableBuilder` — v0.11.0
+- [x] Concave polygon support — ear-clipping triangulation + GL_TRIANGLES
+
+### Open:
 - [ ] Use `MIN_STROKE_WIDTH` constant consistently
-
-### Behavioral (needs migration consideration):
-- [x] Standardize anchor points for new primitives — resolved by removing `(x, y)` from construction; all shapes now use `set_position()`
-- [ ] Document `(x, y)` semantics clearly per shape type
-- [ ] Make instancing position-ignored contract explicit
-
-### Future (larger changes):
+- [ ] Stroke support for Circle, Ellipse, Polygon, RoundedRectangle, Triangle
+- [ ] Document instancing position-ignored contract explicitly
 - [ ] Per-instance scale/rotation attributes
 - [ ] Dynamic instance capacity
 - [ ] Configurable geometry quality (segment counts)
-- [x] Alpha channel throughout rendering pipeline — done in v0.9.0
-- [ ] Concave polygon support (requires triangulation, currently convex only via GL_TRIANGLE_FAN)
