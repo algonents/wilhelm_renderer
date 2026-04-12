@@ -29,8 +29,7 @@ fn make_dot(x: f32, y: f32) -> ShapeRenderable {
         ShapeKind::Circle(Circle::new(4.0)),
         ShapeStyle::fill(Color::from_rgb(1.0, 0.2, 0.2)),
     );
-    dot.set_position(x, y);
-    dot.set_z_order(1);
+    dot.set_position(x, y).set_z_order(1);
     dot
 }
 
