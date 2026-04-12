@@ -308,9 +308,10 @@ impl ShapeRenderable {
         Self { x: 0.0, y: 0.0, scale: 1.0, rotation: 0.0, z_order: 0, mesh, stroke_mesh: Some(stroke_mesh), shape }
     }
 
-    pub fn set_position(&mut self, x: f32, y: f32) {
+    pub fn set_position(&mut self, x: f32, y: f32) -> &mut Self {
         self.x = x;
         self.y = y;
+        self
     }
 
     pub fn x(&self) -> f32 {
@@ -325,38 +326,43 @@ impl ShapeRenderable {
         (self.x, self.y)
     }
 
-    pub fn set_scale(&mut self, scale: f32) {
+    pub fn set_scale(&mut self, scale: f32) -> &mut Self {
         self.scale = scale;
+        self
     }
 
     pub fn scale(&self) -> f32 {
         self.scale
     }
 
-    pub fn set_rotation(&mut self, angle: f32) {
+    pub fn set_rotation(&mut self, angle: f32) -> &mut Self {
         self.rotation = angle;
+        self
     }
 
     pub fn rotation(&self) -> f32 {
         self.rotation
     }
 
-    pub fn set_z_order(&mut self, z_order: i32) {
+    pub fn set_z_order(&mut self, z_order: i32) -> &mut Self {
         self.z_order = z_order;
+        self
     }
 
     pub fn z_order(&self) -> i32 {
         self.z_order
     }
 
-    pub fn set_fill_color(&mut self, color: Color) {
+    pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
         self.mesh.color = Some(color);
+        self
     }
 
-    pub fn set_stroke_color(&mut self, color: Color) {
+    pub fn set_stroke_color(&mut self, color: Color) -> &mut Self {
         if let Some(stroke) = &mut self.stroke_mesh {
             stroke.color = Some(color);
         }
+        self
     }
 
     pub fn fill_color(&self) -> Option<Color> {
@@ -472,21 +478,24 @@ impl ShapeRenderable {
         }
     }
 
-    pub fn set_instance_positions(&mut self, positions: &[Vec2]) {
+    pub fn set_instance_positions(&mut self, positions: &[Vec2]) -> &mut Self {
         self.mesh.geometry.update_instance_xy(positions);
         if let Some(stroke) = &mut self.stroke_mesh {
             stroke.geometry.update_instance_xy(positions);
         }
+        self
     }
 
-    pub fn set_instance_colors(&mut self, colors: &[Color]) {
+    pub fn set_instance_colors(&mut self, colors: &[Color]) -> &mut Self {
         self.mesh.geometry.update_instance_colors(colors);
+        self
     }
 
-    pub fn set_instance_stroke_colors(&mut self, colors: &[Color]) {
+    pub fn set_instance_stroke_colors(&mut self, colors: &[Color]) -> &mut Self {
         if let Some(stroke) = &mut self.stroke_mesh {
             stroke.geometry.update_instance_colors(colors);
         }
+        self
     }
 
     pub fn clear_instances(&mut self) {
