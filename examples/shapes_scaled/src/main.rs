@@ -17,14 +17,14 @@ fn stroke_style(color: Color, width: f32) -> ShapeStyle {
         fill: Some(color.clone()),
         stroke_color: Some(color),
         stroke_width: Some(width),
+        ..Default::default()
     }
 }
 
 fn fill_style(color: Color) -> ShapeStyle {
     ShapeStyle {
         fill: Some(color),
-        stroke_color: None,
-        stroke_width: None,
+        ..Default::default()
     }
 }
 

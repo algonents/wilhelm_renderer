@@ -34,6 +34,7 @@ members = [
     "wilhelm_renderer_sys",
     "examples/anchor_rotations",
     "examples/alpha_transparency",
+    "examples/dashed_lines",
     "examples/bouncing_balls",
     "examples/bouncing_balls_instanced",
     "examples/instancing",

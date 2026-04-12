@@ -87,6 +87,17 @@ impl Renderer {
             }
         }
 
+        if let Some((dash, gap)) = mesh.dash_pattern {
+            let dash_loc = gl_get_uniform_location(mesh.shader.program(), "u_dash_length");
+            if dash_loc != -1 {
+                gl_uniform_1f(dash_loc, dash);
+            }
+            let gap_loc = gl_get_uniform_location(mesh.shader.program(), "u_gap_length");
+            if gap_loc != -1 {
+                gl_uniform_1f(gap_loc, gap);
+            }
+        }
+
         if let Some(texture_id) = mesh.texture {
             gl_active_texture(GL_TEXTURE0);
             gl_bind_texture(GL_TEXTURE_2D, texture_id);
@@ -149,6 +160,17 @@ impl Renderer {
         if color4_loc != -1 {
             if let Some(color) = mesh.color.as_ref() {
                 gl_uniform_4f(color4_loc, color.red_value(), color.green_value(), color.blue_value(), color.alpha());
+            }
+        }
+
+        if let Some((dash, gap)) = mesh.dash_pattern {
+            let dash_loc = gl_get_uniform_location(mesh.shader.program(), "u_dash_length");
+            if dash_loc != -1 {
+                gl_uniform_1f(dash_loc, dash);
+            }
+            let gap_loc = gl_get_uniform_location(mesh.shader.program(), "u_gap_length");
+            if gap_loc != -1 {
+                gl_uniform_1f(gap_loc, gap);
             }
         }
 

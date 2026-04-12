@@ -26,8 +26,7 @@ fn main() {
         ShapeKind::Circle(Circle::new(RADIUS)),
         ShapeStyle {
             fill: Some(Color::from_rgb(STEEL_BLUE.0, STEEL_BLUE.1, STEEL_BLUE.2)),
-            stroke_color: None,
-            stroke_width: None,
+            ..Default::default()
         },
     );
     let instance_count = COLS * ROWS;

@@ -15,6 +15,7 @@ pub struct Mesh {
     rotation: f32,
     pub color: Option<Color>,
     pub texture: Option<GLuint>,
+    pub dash_pattern: Option<(f32, f32)>,
 }
 
 impl Mesh {
@@ -28,7 +29,8 @@ impl Mesh {
             scale: 1.0,
             rotation: 0.0,
             color: None,
-            texture: None
+            texture: None,
+            dash_pattern: None,
         }
     }
 
@@ -41,7 +43,8 @@ impl Mesh {
             scale: 1.0,
             rotation: 0.0,
             color,
-            texture: None
+            texture: None,
+            dash_pattern: None,
         }
     }
 
@@ -54,7 +57,8 @@ impl Mesh {
             scale: 1.0,
             rotation: 0.0,
             color: None,
-            texture
+            texture,
+            dash_pattern: None,
         }
     }
 
