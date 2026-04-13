@@ -2,8 +2,8 @@ extern crate wilhelm_renderer;
 
 use wilhelm_renderer::core::{App, Color, Window};
 use wilhelm_renderer::graphics2d::shapes::{
-    Circle, Ellipse, Line, MultiPoint, Polygon, Polyline, Rectangle, RoundedRectangle, ShapeKind,
-    ShapeRenderable, ShapeStyle,
+    Anchor, Circle, Ellipse, Line, MultiPoint, Polygon, Polyline, Rectangle, RoundedRectangle,
+    ShapeKind, ShapeRenderable, ShapeStyle,
 };
 
 use std::cell::Cell;
@@ -80,6 +80,12 @@ fn main() {
         s
     };
 
+    let shape_anchored = |pos: (f32, f32), kind: ShapeKind, style: ShapeStyle, anchor: Anchor| -> ShapeRenderable {
+        let mut s = ShapeRenderable::builder(kind, style).anchor(anchor).build();
+        s.set_position(pos.0, pos.1);
+        s
+    };
+
     let image_sized = |pos: (f32, f32), path: &str, w: f32, h: f32| -> ShapeRenderable {
         let mut s = ShapeRenderable::image_with_size(path, w, h);
         s.set_position(pos.0, pos.1);
@@ -103,15 +109,17 @@ fn main() {
             ShapeKind::Polyline(Polyline::new(polyline_points)),
             stroke_style(Color::from_rgb(0.0, 1.0, 0.0), 10.0),
         ),
-        // Rectangle at (50, 50)
-        shape((50.0, 50.0),
+        // Rectangle at (50, 50) — center anchor
+        shape_anchored((150.0, 90.0),
             ShapeKind::Rectangle(Rectangle::new(200.0, 80.0)),
             fill_style(Color::from_rgb(0.2, 0.5, 0.9)),
+            Anchor::Center,
         ),
-        // Rectangle at (400, 200)
-        shape((400.0, 200.0),
+        // Rectangle at (400, 200) — center anchor
+        shape_anchored((450.0, 225.0),
             ShapeKind::Rectangle(Rectangle::new(100.0, 50.0)),
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
+            Anchor::Center,
         ),
         // Circle at (400, 400)
         shape((400.0, 400.0),
@@ -128,25 +136,28 @@ fn main() {
             ShapeKind::MultiPoint(MultiPoint::new(multipoint_points)),
             fill_style(Color::from_rgb(0.0, 0.0, 1.0)),
         ),
-        // Ellipse at (600, 200)
+        // Ellipse at (600, 200) — already centers by default
         shape((600.0, 200.0),
             ShapeKind::Ellipse(Ellipse::new(80.0, 40.0)),
             fill_style(Color::from_rgb(0.5, 0.2, 0.8)),
         ),
-        // Rounded rectangle at (100, 600)
-        shape((100.0, 600.0),
+        // Rounded rectangle at (100, 600) — center anchor
+        shape_anchored((200.0, 640.0),
             ShapeKind::RoundedRectangle(RoundedRectangle::new(200.0, 80.0, 10.0)),
             fill_style(Color::from_rgb(0.3, 0.6, 0.9)),
+            Anchor::Center,
         ),
-        // Polygon (hexagon) at (600, 600)
-        shape((600.0, 600.0),
+        // Polygon (hexagon) at (600, 600) — center anchor
+        shape_anchored((600.0, 600.0),
             ShapeKind::Polygon(Polygon::new(polygon_points)),
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
+            Anchor::Center,
         ),
-        // Rectangle at (600, 400)
-        shape((600.0, 400.0),
+        // Rectangle at (600, 400) — NorthWest anchor (scales from top-left corner)
+        shape_anchored((600.0, 400.0),
             ShapeKind::Rectangle(Rectangle::new(100.0, 50.0)),
             fill_style(Color::from_rgb(0.0, 1.0, 0.0)),
+            Anchor::NorthWest,
         ),
         // Images
         image_sized((200.0, 300.0), "../../images/smiley.png", 40.0, 40.0),
