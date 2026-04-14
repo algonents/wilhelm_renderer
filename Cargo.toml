@@ -43,6 +43,7 @@ members = [
     "examples/rotations",
     "examples/shapes",
     "examples/shapes_scaled",
+    "examples/markers",
     "examples/style_mutation",
     "examples/text",
     "examples/transforms",
