@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.12.0] - 2026-04-18
+
+### Added
+
+- **Fluent setter chaining.** All `ShapeRenderable` setters (`set_position`, `set_scale`, `set_rotation`, `set_z_order`, `set_fill_color`, `set_stroke_color`, and instance setters) now return `&mut Self`:
+  ```rust
+  shape.set_position(x, y).set_rotation(0.5).set_z_order(1);
+  ```
+
+- **Dashed line rendering.** GPU-accelerated dashed/dotted lines via a dedicated shader pair that discards fragments in gap regions based on per-vertex cumulative distance:
+  ```rust
+  ShapeStyle::dashed_stroke(color, 2.0, 10.0, 5.0)  // 10px dash, 5px gap
+  ShapeStyle::stroke(color, 2.0).with_dash(10.0, 5.0) // chaining variant
+  ```
+
+- **Stroke support for all shapes.** Circle, Ellipse, Triangle, Polygon, and RoundedRectangle now support stroke-only, fill+stroke, and dashed stroke rendering — completing Phase 2.5. All shapes now accept the same `ShapeStyle` variants:
+  ```rust
+  ShapeStyle::stroke(color, 2.0)                          // outline only
+  ShapeStyle::fill_and_stroke(fill, stroke, 2.0)          // fill + outline
+  ShapeStyle::dashed_stroke(color, 2.0, 10.0, 5.0)       // dashed outline
+  ShapeStyle::fill_and_stroke(f, s, 2.0).with_dash(10, 5) // fill + dashed outline
+  ```
+
+- **`MarkerType` enum** for geometric point symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye). Generates polygon vertices centered at origin for a given bounding radius. Migrated from the separate `wilhelm_renderer_symbols` crate:
+  ```rust
+  use wilhelm_renderer::graphics2d::markers::MarkerType;
+  let verts = MarkerType::Star.vertices(20.0);
+  ```
+
+- **New examples:** `anchor_rotations`, `dashed_lines`, `markers`.
+
 ## [0.11.0] - 2026-04-12
 
 ### Breaking Changes
@@ -20,19 +51,6 @@
   `from_shape()` continues to work unchanged (uses `Anchor::Default`).
 
 - **Centroid helpers** on `Line` (midpoint), `Triangle` (vertex average), `MultiPoint` (vertex average), `Polyline` (vertex average), and `Polygon` (area centroid via shoelace formula).
-
-- **Fluent setter chaining.** All `ShapeRenderable` setters (`set_position`, `set_scale`, `set_rotation`, `set_z_order`, `set_fill_color`, `set_stroke_color`, and instance setters) now return `&mut Self`:
-  ```rust
-  shape.set_position(x, y).set_rotation(0.5).set_z_order(1);
-  ```
-
-- **Dashed line rendering.** GPU-accelerated dashed/dotted lines via a dedicated shader pair that discards fragments in gap regions based on per-vertex cumulative distance. Supports `Line`, `Polyline`, `Arc`, and `Rectangle` outlines:
-  ```rust
-  ShapeStyle::dashed_stroke(color, 2.0, 10.0, 5.0)  // 10px dash, 5px gap
-  ShapeStyle::stroke(color, 2.0).with_dash(10.0, 5.0) // chaining variant
-  ```
-
-- **New examples:** `anchor_rotations` (rotation pivots demo), `dashed_lines` (dash patterns demo).
 
 ### Fixed
 

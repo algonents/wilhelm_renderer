@@ -16,9 +16,12 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 **Rendering:**
 - Instanced rendering for high-performance scenes (10,000+ shapes)
 - Per-shape rotation, scale, and position
-- Fill, stroke, and fill+stroke styles
+- Fill, stroke, and fill+stroke styles for all shapes
+- Dashed/dotted line rendering (configurable dash and gap lengths)
 - Alpha/opacity support
 - MSAA 4x multisampling
+
+**Markers:** Geometric point symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) via `MarkerType`
 
 **Text:** FreeType-based rendering with font atlas caching and on-demand glyph loading
 
@@ -97,6 +100,9 @@ cargo build --workspace
 | <a href="examples/z_order"><img width="120" alt="z_order" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/z_order.png"></a> | z_order | Shape z-ordering independent of insertion order |
 | <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
 | <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
+| | anchor_rotations | Rotation around different anchor points |
+| | dashed_lines | Dashed/dotted lines, stroked shapes, fill+dashed stroke |
+| | markers | Geometric marker symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) |
 
 ## Installation
 
@@ -119,7 +125,7 @@ Then add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wilhelm_renderer = "0.10"
+wilhelm_renderer = "0.12"
 ```
 
 ## IDE Setup (C++ Language Server)
