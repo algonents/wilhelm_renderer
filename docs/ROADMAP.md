@@ -52,15 +52,13 @@ Add stroke (outline) rendering to filled shapes. Currently, shapes are either fi
 ### Completed
 - [x] Rectangle: fill, stroke, fill+stroke (uses polyline geometry for stroke)
 - [x] Instancing support for fill+stroke (separate stroke colors via `set_instance_stroke_colors`)
+- [x] Circle: stroke and fill+stroke
+- [x] Ellipse: stroke and fill+stroke
+- [x] Polygon: stroke and fill+stroke
+- [x] RoundedRectangle: stroke and fill+stroke
+- [x] Triangle: stroke and fill+stroke
 
-### Remaining
-- [ ] Circle: stroke and fill+stroke
-- [ ] Ellipse: stroke and fill+stroke
-- [ ] Polygon: stroke and fill+stroke
-- [ ] RoundedRectangle: stroke and fill+stroke
-- [ ] Triangle: stroke and fill+stroke
-
-> **Note**: Line, Polyline, and Arc are inherently stroke-based shapes. All stroke-based shapes (including Rectangle outlines) support dashed/dotted rendering via `ShapeStyle::dashed_stroke()` or `.with_dash()`.
+> **Note**: Line, Polyline, and Arc are inherently stroke-based shapes. All shapes now support fill-only, stroke-only, and fill+stroke rendering, including dashed/dotted strokes via `ShapeStyle::dashed_stroke()` or `.with_dash()`.
 
 ## Phase 3: Interaction
 
