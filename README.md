@@ -70,40 +70,6 @@ fn main() {
 }
 ```
 
-## Examples
-
-All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
-
-```shell
-cd examples/<example> && cargo run
-```
-
-Build all examples at once to verify API compatibility:
-
-```shell
-cargo build --workspace
-```
-
-| | Example | Description |
-|---|---------|-------------|
-| <a href="examples/triangle"><img width="120" alt="triangle" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/triangle.png"></a> | triangle | Low-level: custom shaders and geometry |
-| <a href="examples/transforms"><img width="120" alt="transforms" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/transforms.png"></a> | transforms | Low-level: matrix transforms and animation |
-| <a href="examples/shapes"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes | All supported shape types |
-| <a href="examples/text"><img width="120" alt="text" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a> | text | Text rendering with FreeType |
-| <a href="examples/rotations"><img width="120" alt="rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a> | rotations | Per-shape rotation and animation |
-| <a href="examples/shapes_scaled"><img width="120" alt="shapes_scaled" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes_scaled | Shapes with scroll-to-zoom scaling |
-| <a href="examples/bouncing_balls"><img width="120" alt="bouncing_balls" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls.png"></a> | bouncing_balls | 200 animated balls with per-shape rendering |
-| <a href="examples/instancing"><img width="120" alt="instancing" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/instancing.png"></a> | instancing | 1,750 instanced circles with per-instance color |
-| <a href="examples/bouncing_balls_instanced"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | bouncing_balls_instanced | 10,000 animated balls with instanced rendering |
-| <a href="examples/alpha_transparency"><img width="120" alt="alpha_transparency" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/alpha_transparency.png"></a> | alpha_transparency | Alpha blending and opacity control |
-| <a href="examples/style_mutation"><img width="120" alt="style_mutation" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/style_mutation.png"></a> | style_mutation | Dynamic color changes and HSL cycling |
-| <a href="examples/z_order"><img width="120" alt="z_order" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/z_order.png"></a> | z_order | Shape z-ordering independent of insertion order |
-| <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
-| <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
-| | anchor_rotations | Rotation around different anchor points |
-| | dashed_lines | Dashed/dotted lines, stroked shapes, fill+dashed stroke |
-| | markers | Geometric marker symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) |
-
 ## Installation
 
 ### Linux
@@ -137,6 +103,40 @@ cmake -S wilhelm_renderer_sys/cpp -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ```
 
 The `build/` directory is gitignored. Re-run only when `wilhelm_renderer_sys/cpp/CMakeLists.txt` changes.
+
+## Examples
+
+All examples are standalone Cargo projects in the [`examples/`](examples/) directory. Run any example with:
+
+```shell
+cd examples/<example> && cargo run
+```
+
+Build all examples at once to verify API compatibility:
+
+```shell
+cargo build --workspace
+```
+
+| | Example | Description |
+|---|---------|-------------|
+| <a href="examples/triangle"><img width="120" alt="triangle" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/triangle.png"></a> | triangle | Low-level: custom shaders and geometry |
+| <a href="examples/transforms"><img width="120" alt="transforms" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/transforms.png"></a> | transforms | Low-level: matrix transforms and animation |
+| <a href="examples/shapes"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes | All supported shape types |
+| <a href="examples/text"><img width="120" alt="text" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a> | text | Text rendering with FreeType |
+| <a href="examples/rotations"><img width="120" alt="rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a> | rotations | Per-shape rotation and animation |
+| <a href="examples/shapes_scaled"><img width="120" alt="shapes_scaled" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes_scaled | Shapes with scroll-to-zoom scaling |
+| <a href="examples/bouncing_balls"><img width="120" alt="bouncing_balls" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls.png"></a> | bouncing_balls | 200 animated balls with per-shape rendering |
+| <a href="examples/instancing"><img width="120" alt="instancing" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/instancing.png"></a> | instancing | 1,750 instanced circles with per-instance color |
+| <a href="examples/bouncing_balls_instanced"><img width="120" alt="bouncing_balls_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls_instanced.png"></a> | bouncing_balls_instanced | 10,000 animated balls with instanced rendering |
+| <a href="examples/alpha_transparency"><img width="120" alt="alpha_transparency" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/alpha_transparency.png"></a> | alpha_transparency | Alpha blending and opacity control |
+| <a href="examples/style_mutation"><img width="120" alt="style_mutation" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/style_mutation.png"></a> | style_mutation | Dynamic color changes and HSL cycling |
+| <a href="examples/z_order"><img width="120" alt="z_order" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/z_order.png"></a> | z_order | Shape z-ordering independent of insertion order |
+| <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
+| <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
+| | anchor_rotations | Rotation around different anchor points |
+| | dashed_lines | Dashed/dotted lines, stroked shapes, fill+dashed stroke |
+| | markers | Geometric marker symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) |
 
 ## Issues
 
