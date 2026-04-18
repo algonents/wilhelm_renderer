@@ -448,11 +448,17 @@ impl ShapeRenderable {
                 anchor,
                 style.dash_pattern,
             ),
-            ShapeKind::Triangle(triangle) => ShapeRenderable::triangle(
-                triangle,
-                style.fill.unwrap_or(Color::white()),
-                anchor,
-            ),
+            ShapeKind::Triangle(triangle) => match (style.fill, style.stroke_color) {
+                (Some(fill), Some(stroke)) => ShapeRenderable::triangle_fill_and_stroke(
+                    triangle, fill, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (None, Some(stroke)) => ShapeRenderable::triangle_outline(
+                    triangle, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (fill, None) => ShapeRenderable::triangle(
+                    triangle, fill.unwrap_or(Color::white()), anchor,
+                ),
+            },
             ShapeKind::Rectangle(rect) => match (style.fill, style.stroke_color) {
                 (Some(fill), Some(stroke)) => ShapeRenderable::rectangle_fill_and_stroke(
                     rect,
@@ -475,26 +481,50 @@ impl ShapeRenderable {
                     anchor,
                 ),
             },
-            ShapeKind::RoundedRectangle(rr) => ShapeRenderable::rounded_rectangle(
-                rr,
-                style.fill.unwrap_or(Color::white()),
-                anchor,
-            ),
-            ShapeKind::Polygon(polygon) => ShapeRenderable::polygon(
-                polygon,
-                style.fill.unwrap_or(Color::white()),
-                anchor,
-            ),
-            ShapeKind::Circle(circle) => ShapeRenderable::circle(
-                circle,
-                style.fill.unwrap_or(Color::white()),
-                anchor,
-            ),
-            ShapeKind::Ellipse(ellipse) => ShapeRenderable::ellipse(
-                ellipse,
-                style.fill.unwrap_or(Color::white()),
-                anchor,
-            ),
+            ShapeKind::RoundedRectangle(rr) => match (style.fill, style.stroke_color) {
+                (Some(fill), Some(stroke)) => ShapeRenderable::rounded_rectangle_fill_and_stroke(
+                    rr, fill, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (None, Some(stroke)) => ShapeRenderable::rounded_rectangle_outline(
+                    rr, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (fill, None) => ShapeRenderable::rounded_rectangle(
+                    rr, fill.unwrap_or(Color::white()), anchor,
+                ),
+            },
+            ShapeKind::Polygon(polygon) => match (style.fill, style.stroke_color) {
+                (Some(fill), Some(stroke)) => ShapeRenderable::polygon_fill_and_stroke(
+                    polygon, fill, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (None, Some(stroke)) => ShapeRenderable::polygon_outline(
+                    polygon, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (fill, None) => ShapeRenderable::polygon(
+                    polygon, fill.unwrap_or(Color::white()), anchor,
+                ),
+            },
+            ShapeKind::Circle(circle) => match (style.fill, style.stroke_color) {
+                (Some(fill), Some(stroke)) => ShapeRenderable::circle_fill_and_stroke(
+                    circle, fill, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (None, Some(stroke)) => ShapeRenderable::circle_outline(
+                    circle, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (fill, None) => ShapeRenderable::circle(
+                    circle, fill.unwrap_or(Color::white()), anchor,
+                ),
+            },
+            ShapeKind::Ellipse(ellipse) => match (style.fill, style.stroke_color) {
+                (Some(fill), Some(stroke)) => ShapeRenderable::ellipse_fill_and_stroke(
+                    ellipse, fill, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (None, Some(stroke)) => ShapeRenderable::ellipse_outline(
+                    ellipse, stroke, style.stroke_width.unwrap_or(1.0), anchor, style.dash_pattern,
+                ),
+                (fill, None) => ShapeRenderable::ellipse(
+                    ellipse, fill.unwrap_or(Color::white()), anchor,
+                ),
+            },
             ShapeKind::Arc(arc) => ShapeRenderable::arc(
                 arc,
                 style.stroke_color.unwrap_or(Color::white()),
@@ -674,6 +704,33 @@ impl ShapeRenderable {
         s
     }
 
+    /// Build a stroke mesh from a closed polyline, choosing solid or dashed rendering.
+    fn stroke_mesh_from_outline(
+        points: &mut Vec<(f32, f32)>,
+        stroke: Color,
+        stroke_width: f32,
+        dash_pattern: Option<(f32, f32)>,
+    ) -> Mesh {
+        // For solid strokes, add a direction hint (second point) for proper miter at closing corner.
+        // For dashed strokes, skip it — the overlap would fill in gaps.
+        if dash_pattern.is_none() {
+            if let Some(&second) = points.get(1) {
+                points.push(second);
+            }
+        }
+
+        let (geometry, shader) = if let Some(_) = dash_pattern {
+            (ShapeRenderable::polyline_geometry_dashed(points, stroke_width), dashed_shader())
+        } else {
+            (ShapeRenderable::polyline_geometry(points, stroke_width), default_shader())
+        };
+        let mut mesh = Mesh::with_color(shader, geometry, Some(stroke));
+        if let Some((dash, gap)) = dash_pattern {
+            mesh.dash_pattern = Some((dash, gap));
+        }
+        mesh
+    }
+
     fn triangle(triangle: Triangle, color: Color, anchor: Anchor) -> Self {
         let [v0, v1, v2] = triangle.vertices;
         let bbox_min = (v0.0.min(v1.0).min(v2.0), v0.1.min(v1.1).min(v2.1));
@@ -690,6 +747,51 @@ impl ShapeRenderable {
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Triangle(triangle));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn triangle_outline(triangle: Triangle, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let [v0, v1, v2] = triangle.vertices;
+        let bbox_min = (v0.0.min(v1.0).min(v2.0), v0.1.min(v1.1).min(v2.1));
+        let bbox_max = (v0.0.max(v1.0).max(v2.0), v0.1.max(v1.1).max(v2.1));
+        let default = triangle.centroid();
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let mut points = vec![
+            (v0.0 - ax, v0.1 - ay),
+            (v1.0 - ax, v1.1 - ay),
+            (v2.0 - ax, v2.1 - ay),
+            (v0.0 - ax, v0.1 - ay), // close
+        ];
+        let mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Triangle(triangle));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn triangle_fill_and_stroke(triangle: Triangle, fill: Color, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let [v0, v1, v2] = triangle.vertices;
+        let bbox_min = (v0.0.min(v1.0).min(v2.0), v0.1.min(v1.1).min(v2.1));
+        let bbox_max = (v0.0.max(v1.0).max(v2.0), v0.1.max(v1.1).max(v2.1));
+        let default = triangle.centroid();
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let shifted = [
+            (v0.0 - ax, v0.1 - ay),
+            (v1.0 - ax, v1.1 - ay),
+            (v2.0 - ax, v2.1 - ay),
+        ];
+        let fill_geometry = ShapeRenderable::triangle_geometry(&shifted);
+        let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
+
+        let mut points = vec![shifted[0], shifted[1], shifted[2], shifted[0]];
+        let stroke_mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::Triangle(triangle));
         s.x = ax;
         s.y = ay;
         s
@@ -793,6 +895,32 @@ impl ShapeRenderable {
         s
     }
 
+    fn rounded_rectangle_outline(rr: RoundedRectangle, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let (ax, ay) = rectangle_anchor(rr.width, rr.height, anchor);
+        let mut points = ShapeRenderable::rounded_rectangle_outline_points(rr.width, rr.height, rr.radius, 8, ax, ay);
+        let mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::RoundedRectangle(rr));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn rounded_rectangle_fill_and_stroke(rr: RoundedRectangle, fill: Color, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let (ax, ay) = rectangle_anchor(rr.width, rr.height, anchor);
+
+        let fill_geometry = ShapeRenderable::rounded_rectangle_geometry(rr.width, rr.height, rr.radius, 8, ax, ay);
+        let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
+
+        let mut points = ShapeRenderable::rounded_rectangle_outline_points(rr.width, rr.height, rr.radius, 8, ax, ay);
+        let stroke_mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::RoundedRectangle(rr));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
     fn polygon(polygon: Polygon, color: Color, anchor: Anchor) -> Self {
         assert!(polygon.points.len() >= 3, "Polygon requires at least 3 points");
 
@@ -816,6 +944,45 @@ impl ShapeRenderable {
         s
     }
 
+    fn polygon_outline(polygon: Polygon, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        assert!(polygon.points.len() >= 3, "Polygon requires at least 3 points");
+
+        let (bbox_min, bbox_max) = bbox_of_points(&polygon.points);
+        let default = polygon.points[0];
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let mut points: Vec<(f32, f32)> = polygon.points.iter().map(|(px, py)| (px - ax, py - ay)).collect();
+        points.push(points[0]); // close
+        let mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Polygon(polygon));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn polygon_fill_and_stroke(polygon: Polygon, fill: Color, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        assert!(polygon.points.len() >= 3, "Polygon requires at least 3 points");
+
+        let (bbox_min, bbox_max) = bbox_of_points(&polygon.points);
+        let default = polygon.points[0];
+        let (ax, ay) = resolve_anchor(anchor, bbox_min, bbox_max, default);
+
+        let rel_points: Vec<(f32, f32)> = polygon.points.iter().map(|(px, py)| (px - ax, py - ay)).collect();
+        let triangles = polygon.triangulate();
+        let fill_geometry = ShapeRenderable::polygon_geometry(&rel_points, &triangles);
+        let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
+
+        let mut outline = rel_points.clone();
+        outline.push(outline[0]); // close
+        let stroke_mesh = ShapeRenderable::stroke_mesh_from_outline(&mut outline, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::Polygon(polygon));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
     fn circle(circle: Circle, color: Color, anchor: Anchor) -> Self {
         let r = circle.radius;
         let (ax, ay) = resolve_anchor(anchor, (-r, -r), (r, r), (0.0, 0.0));
@@ -823,6 +990,34 @@ impl ShapeRenderable {
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Circle(circle));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn circle_outline(circle: Circle, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let r = circle.radius;
+        let (ax, ay) = resolve_anchor(anchor, (-r, -r), (r, r), (0.0, 0.0));
+        let mut points = ShapeRenderable::circle_outline_points(r, 100, ax, ay);
+        let mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Circle(circle));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn circle_fill_and_stroke(circle: Circle, fill: Color, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let r = circle.radius;
+        let (ax, ay) = resolve_anchor(anchor, (-r, -r), (r, r), (0.0, 0.0));
+
+        let fill_geometry = ShapeRenderable::circle_geometry(r, 100, ax, ay);
+        let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
+
+        let mut points = ShapeRenderable::circle_outline_points(r, 100, ax, ay);
+        let stroke_mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::Circle(circle));
         s.x = ax;
         s.y = ay;
         s
@@ -836,6 +1031,36 @@ impl ShapeRenderable {
         let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::Ellipse(ellipse));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn ellipse_outline(ellipse: Ellipse, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let rx = ellipse.radius_x;
+        let ry = ellipse.radius_y;
+        let (ax, ay) = resolve_anchor(anchor, (-rx, -ry), (rx, ry), (0.0, 0.0));
+        let mut points = ShapeRenderable::ellipse_outline_points(rx, ry, 64, ax, ay);
+        let mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Ellipse(ellipse));
+        s.x = ax;
+        s.y = ay;
+        s
+    }
+
+    fn ellipse_fill_and_stroke(ellipse: Ellipse, fill: Color, stroke: Color, stroke_width: f32, anchor: Anchor, dash_pattern: Option<(f32, f32)>) -> Self {
+        let rx = ellipse.radius_x;
+        let ry = ellipse.radius_y;
+        let (ax, ay) = resolve_anchor(anchor, (-rx, -ry), (rx, ry), (0.0, 0.0));
+
+        let fill_geometry = ShapeRenderable::ellipse_geometry(rx, ry, 64, ax, ay);
+        let fill_mesh = Mesh::with_color(default_shader(), fill_geometry, Some(fill));
+
+        let mut points = ShapeRenderable::ellipse_outline_points(rx, ry, 64, ax, ay);
+        let stroke_mesh = ShapeRenderable::stroke_mesh_from_outline(&mut points, stroke, stroke_width, dash_pattern);
+
+        let mut s = ShapeRenderable::new_with_stroke(fill_mesh, stroke_mesh, ShapeKind::Ellipse(ellipse));
         s.x = ax;
         s.y = ay;
         s
@@ -1253,6 +1478,60 @@ impl ShapeRenderable {
         geometry.add_vertex_attribute(Attribute::new(0, 2, 3, 0)); // vec2 position
         geometry.add_vertex_attribute(Attribute::new(3, 1, 3, 2)); // float distance
         geometry
+    }
+
+    /// Generate outline points for a circle as a closed polyline.
+    fn circle_outline_points(radius: f32, segments: usize, ax: f32, ay: f32) -> Vec<(f32, f32)> {
+        let mut points = Vec::with_capacity(segments + 2);
+        for i in 0..=segments {
+            let theta = (i as f32 / segments as f32) * std::f32::consts::TAU;
+            points.push((radius * theta.cos() - ax, radius * theta.sin() - ay));
+        }
+        points
+    }
+
+    /// Generate outline points for an ellipse as a closed polyline.
+    fn ellipse_outline_points(rx: f32, ry: f32, segments: usize, ax: f32, ay: f32) -> Vec<(f32, f32)> {
+        let mut points = Vec::with_capacity(segments + 2);
+        for i in 0..=segments {
+            let angle = std::f32::consts::TAU * (i as f32) / (segments as f32);
+            points.push((rx * angle.cos() - ax, ry * angle.sin() - ay));
+        }
+        points
+    }
+
+    /// Generate outline points for a rounded rectangle as a closed polyline.
+    fn rounded_rectangle_outline_points(
+        width: f32,
+        height: f32,
+        corner_radius: f32,
+        segments: usize,
+        ax: f32,
+        ay: f32,
+    ) -> Vec<(f32, f32)> {
+        let r = corner_radius;
+        let corners = [
+            (r, r, PI, 1.5 * PI),                      // top-left
+            (width - r, r, 1.5 * PI, 2.0 * PI),        // top-right
+            (width - r, height - r, 0.0, 0.5 * PI),    // bottom-right
+            (r, height - r, 0.5 * PI, PI),              // bottom-left
+        ];
+
+        let total = (segments + 1) * 4 + 1; // 4 arcs + closing point
+        let mut points = Vec::with_capacity(total);
+
+        for &(cx, cy, start, end) in &corners {
+            for i in 0..=segments {
+                let theta = start + (end - start) * (i as f32) / (segments as f32);
+                points.push((cx + r * theta.cos() - ax, cy + r * theta.sin() - ay));
+            }
+        }
+
+        // Close the loop
+        if let Some(&first) = points.first() {
+            points.push(first);
+        }
+        points
     }
 
     fn triangle_geometry(vertices: &[(f32, f32); 3]) -> Geometry {
