@@ -134,9 +134,9 @@ cargo build --workspace
 | <a href="examples/z_order"><img width="120" alt="z_order" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/z_order.png"></a> | z_order | Shape z-ordering independent of insertion order |
 | <a href="examples/waypoints"><img width="120" alt="waypoints" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints.png"></a> | waypoints | WGS84 coordinates with Camera2D projection |
 | <a href="examples/waypoints_instanced"><img width="120" alt="waypoints_instanced" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/waypoints_instanced.png"></a> | waypoints_instanced | Instanced waypoint markers with Camera2D |
-| | anchor_rotations | Rotation around different anchor points |
-| | dashed_lines | Dashed/dotted lines, stroked shapes, fill+dashed stroke |
-| | markers | Geometric marker symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) |
+| <a href="examples/anchor_rotations"><img width="120" alt="anchor_rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/anchor_rotations.png"></a> | anchor_rotations | Rotation around different anchor points |
+| <a href="examples/dashed_lines"><img width="120" alt="dashed_lines" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/dashed_lines_and_shapes.png"></a> | dashed_lines | Dashed/dotted lines, stroked shapes, fill+dashed stroke |
+| <a href="examples/markers"><img width="120" alt="markers" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/markers.png"></a> | markers | Geometric marker symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) |
 
 ## Issues
 
