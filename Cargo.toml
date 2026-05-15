@@ -26,7 +26,7 @@ exclude = [
 
 [dependencies]
 image = "0.25.6"
-wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.10.0" }
+wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.10.1" }
 
 [workspace]
 members = [
