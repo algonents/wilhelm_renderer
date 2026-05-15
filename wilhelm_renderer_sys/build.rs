@@ -9,6 +9,13 @@ fn main() {
     println!("cargo:rerun-if-changed=cpp/src/glrenderer.cpp");
     println!("cargo:rerun-if-changed=cpp/include/glrenderer.h");
 
+    // Publish the bundled GLFW include path so direct dependents (e.g.
+    // wilhelm_renderer_imgui) can compile their own GLFW-using code against the
+    // exact same headers we link against. Available downstream as
+    // DEP_WILHELM_RENDERER_INCLUDE (derived from the `links` key in Cargo.toml).
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    println!("cargo:include={}/cpp/glfw-3.4/include", manifest_dir);
+
     let target = env::var("TARGET").unwrap();
 
     let dst = cmake::Config::new("cpp")
