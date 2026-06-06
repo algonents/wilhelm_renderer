@@ -115,4 +115,5 @@ The high-level `ShapeRenderable` API uses 1 draw call per shape, which becomes a
 - **docs/TODO.md**: Technical debt and improvement areas including resource leaks, FFI issues, performance optimizations, and code style cleanup.
 - **docs/PRIMITIVES.md**: Graphics primitives needed for 2D visualization (maps, radar, data viz), organized by priority (critical, important, nice to have).
 - **docs/SHAPE_API_REVIEW.md**: API inconsistencies and improvement roadmap.
+- **docs/PERFORMANCE_ANALYSIS.md**: Performance analysis of `ShapeKind` (ADT vs trait objects), move/borrow costs, enum size, and rendering hot paths.
 - **CHANGELOG.md**: Record of API changes, improvements, and known limitations.

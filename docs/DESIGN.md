@@ -6,12 +6,23 @@ wilhelm_renderer is a GPU-accelerated 2D display engine for real-time operationa
 
 Its peers are Qt Graphics View, Cairo/GDK, and OpenSceneGraph 2D — but leaner, Rust-native, and purpose-built for streaming positional data.
 
+## Crate Structure
+
+The project is split into two published crates, following the `openssl`/`openssl-sys` convention:
+
+- **`wilhelm_renderer`** (repo root) — the safe Rust API. Contains no C/C++ source and no `build.rs`. Depends on the sys crate via an exact version pin.
+- **`wilhelm_renderer_sys`** (`wilhelm_renderer_sys/`) — raw `extern "C"` bindings plus the bundled GLFW 3.4 / FreeType 2.13.2 C/C++ sources and the CMake `build.rs`. Exposes no safe API.
+
+A Cargo `[workspace]` at the root ties both crates and all examples together. The layout is asymmetric: the upper crate lives at the repo root and the sys crate sits in a subdirectory — there is no virtual workspace manifest.
+
+**Why the split:** bundling ~2 MiB of C source in the main crate made it look like a C project on crates.io. Keeping the native code in `*-sys` isolates it, so the safe API crate is pure Rust.
+
 ## Dependency Policy
 
 The library targets certification environments. Dependencies must be minimal and auditable.
 
-**Current dependencies:** `glam` (math), `image` (image loading)
-**Bundled:** GLFW 3.4 (window management), FreeType 2.13.2 (text rendering)
+**Current dependencies:** `glam` (math), `image` (image loading), `wilhelm_renderer_sys` (FFI bindings, exact version pin)
+**Bundled (in the sys crate):** GLFW 3.4 (window management), FreeType 2.13.2 (text rendering)
 
 Do not add external crates for computational geometry, data processing, or other functionality that can be implemented directly. Every new dependency increases the certification surface.
 
@@ -26,26 +37,31 @@ Do not add external crates for computational geometry, data processing, or other
 
 Point, MultiPoint, Line, Polyline, Arc, Triangle, Rectangle, RoundedRectangle, Circle, Ellipse, Polygon, Image, Text
 
-## Three-Layer Design
+## Layered Design
 
 ```
-┌─────────────────────────────────────────────┐
+┌─────────────────────────────────────────────┐  wilhelm_renderer crate
 │  Graphics2D API                             │
 │  Shape types + ShapeRenderable              │
 ├─────────────────────────────────────────────┤
 │  Core Rendering Engine                      │
 │  App, Renderer, Mesh, Geometry, Shader      │
 ├─────────────────────────────────────────────┤
-│  FFI Layer                                  │
-│  OpenGL bindings, GLFW wrappers (C++)       │
+│  Safe FFI Wrappers                          │
+│  src/core/engine/ (opengl, glfw, freetype)  │
+╞═════════════════════════════════════════════╡  ← crate boundary
+│  Raw FFI Bindings                           │  wilhelm_renderer_sys crate
+│  extern "C" decls + C/C++ sources (CMake)   │
 └─────────────────────────────────────────────┘
 ```
 
-1. **FFI Layer** (`src/core/engine/`) — Raw OpenGL and GLFW bindings via C++ wrappers in `cpp/glrenderer.cpp`.
+1. **Raw FFI Bindings** (`wilhelm_renderer_sys`) — Raw `extern "C"` declarations (`opengl`, `glfw`, `freetype` modules) over the C++ wrappers in `cpp/glrenderer.cpp`, plus the bundled GLFW/FreeType sources and the CMake `build.rs`. No safe API.
 
-2. **Core Rendering Engine** (`src/core/`) — App loop, mesh drawing, VAO/VBO management, shader compilation, texture loading. This layer knows about GPU resources but not about shapes.
+2. **Safe FFI Wrappers** (`src/core/engine/`) — Safe Rust wrappers (`opengl.rs`, `glfw.rs`, `freetype.rs`) over the sys crate. Each imports the raw bindings privately via `use wilhelm_renderer_sys::<mod> as sys;` and calls through the `sys::` alias; raw functions are not re-exported.
 
-3. **Graphics2D API** (`src/graphics2d/`) — Shape types, ShapeRenderable, shaders. This layer provides the user-facing API.
+3. **Core Rendering Engine** (`src/core/`) — App loop, mesh drawing, VAO/VBO management, shader compilation, texture loading. This layer knows about GPU resources but not about shapes.
+
+4. **Graphics2D API** (`src/graphics2d/`) — Shape types, ShapeRenderable, shaders. This layer provides the user-facing API.
 
 ## Shape vs ShapeRenderable
 
