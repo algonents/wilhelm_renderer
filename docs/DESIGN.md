@@ -2,6 +2,7 @@
 
 ## Positioning
 
+
 wilhelm_renderer is a GPU-accelerated 2D display engine for real-time operational visualization. The primary use case is the SkyTracker ATM radar display (Controller Working Position), but the library is general-purpose for any application rendering real-time 2D positional data with geographic projection.
 
 Its peers are Qt Graphics View, Cairo/GDK, and OpenSceneGraph 2D — but leaner, Rust-native, and purpose-built for streaming positional data.
