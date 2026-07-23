@@ -6,8 +6,9 @@ fn main() {
         return;
     }
     println!("cargo:rerun-if-changed=cpp/CMakeLists.txt");
-    println!("cargo:rerun-if-changed=cpp/src/glrenderer.cpp");
-    println!("cargo:rerun-if-changed=cpp/include/glrenderer.h");
+    println!("cargo:rerun-if-changed=cpp/glrenderer.cpp");
+    println!("cargo:rerun-if-changed=cpp/glrenderer.h");
+    println!("cargo:rerun-if-env-changed=GLRENDERER_BUILD_X11");
 
     // Publish the bundled GLFW include path so direct dependents (e.g.
     // wilhelm_renderer_imgui) can compile their own GLFW-using code against the
@@ -18,10 +19,17 @@ fn main() {
 
     let target = env::var("TARGET").unwrap();
 
-    let dst = cmake::Config::new("cpp")
-        .build_target("glrenderer")
-        .static_crt(true)
-        .build();
+    let mut cmake_config = cmake::Config::new("cpp");
+    cmake_config.build_target("glrenderer").static_crt(true);
+
+    // Allow Wayland-only builds (no X11 headers required), e.g. for embedded
+    // kiosk targets: GLRENDERER_BUILD_X11=OFF disables the GLFW X11 backend.
+    if let Ok(val) = env::var("GLRENDERER_BUILD_X11") {
+        let off = matches!(val.to_ascii_lowercase().as_str(), "0" | "off" | "false" | "no");
+        cmake_config.define("GLRENDERER_BUILD_X11", if off { "OFF" } else { "ON" });
+    }
+
+    let dst = cmake_config.build();
 
     let cmake_build_output = dst.join("build");
 

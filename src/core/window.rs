@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use std::rc::Rc;
 use crate::core::Color;
 use crate::core::engine::opengl::{gl_clear_color, gl_viewport};
-use crate::core::engine::glfw::{GLFWwindow, glfw_create_window, glfw_destroy_window, glfw_get_window_content_scale, glfw_get_window_user_pointer, glfw_poll_events, glfw_set_cursor_pos_callback, glfw_set_key_callback, glfw_set_mouse_button_callback, glfw_set_scroll_callback, glfw_set_window_size_callback, glfw_set_window_user_pointer, glfw_swap_buffers, glfw_window_should_close};
+use crate::core::engine::glfw::{GLFWwindow, glfw_create_fullscreen_window, glfw_create_window, glfw_destroy_window, glfw_get_window_content_scale, glfw_get_window_user_pointer, glfw_poll_events, glfw_set_cursor_pos_callback, glfw_set_key_callback, glfw_set_mouse_button_callback, glfw_set_scroll_callback, glfw_set_window_size_callback, glfw_set_window_user_pointer, glfw_swap_buffers, glfw_window_should_close};
 
 
 /// Shared inner state that both Window and WindowHandle can access.
@@ -99,6 +99,24 @@ extern "C" fn _on_mouse_button_callback(
 impl Window {
     pub fn new(title: &str, width: i32, height: i32, background_color: Color) -> Box<Self> {
         let glfw_window = glfw_create_window(title, width, height, Some(_on_viewport_resized));
+        Self::from_glfw_window(glfw_window, width, height, background_color)
+    }
+
+    /// Creates a fullscreen window on the primary monitor at its current
+    /// video mode (e.g. for kiosk deployments). The window dimensions are
+    /// those of the monitor; query them via `width()`/`height()`.
+    pub fn new_fullscreen(title: &str, background_color: Color) -> Box<Self> {
+        let (glfw_window, width, height) =
+            glfw_create_fullscreen_window(title, Some(_on_viewport_resized));
+        Self::from_glfw_window(glfw_window, width, height, background_color)
+    }
+
+    fn from_glfw_window(
+        glfw_window: *const GLFWwindow,
+        width: i32,
+        height: i32,
+        background_color: Color,
+    ) -> Box<Self> {
         // hook callbacks
         glfw_set_window_size_callback(glfw_window, Some(_on_window_resized_callback));
         glfw_set_scroll_callback(glfw_window, Some(_on_scroll_callback));

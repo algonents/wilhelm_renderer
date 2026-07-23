@@ -8,16 +8,10 @@ extern "C"
     }
 
 
-    GLFWwindow *_glfwCreateWindow(const char *title, int width, int height, GLFWframebuffersizefun callback)
+    static void applyWindowHints(int samples)
     {
-        glfwSetErrorCallback(glfwErrorCallback);
-        
-        if(!glfwInit()){
-            return nullptr;
-        }
-
         // Set MSAA samples for antialiasing
-        glfwWindowHint(GLFW_SAMPLES, 4);
+        glfwWindowHint(GLFW_SAMPLES, samples);
 
         // Enable DPI scaling on Windows - window resizes based on monitor content scale
         glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
@@ -31,20 +25,15 @@ extern "C"
         // So that means we only have the modern functions
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        //glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);        
+        //glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
 #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+    }
 
-        GLFWwindow *window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-        //glfwCreateWindow(100, 100, "Title", glfwGetPrimaryMonitor(), NULL);
-        if (window == nullptr)
-        {
-            std::cerr << "Failed to create GLFW window" << std::endl;
-            glfwTerminate();
-            return nullptr;
-        }
+    static GLFWwindow *finishWindowSetup(GLFWwindow *window, GLFWframebuffersizefun callback)
+    {
         glfwMakeContextCurrent(window);
         glfwSetFramebufferSizeCallback(window, callback);
 
@@ -59,11 +48,82 @@ extern "C"
 
         // Enable MSAA (glEnable must come AFTER context is current and GLAD is loaded)
         glEnable(GL_MULTISAMPLE);
-        
+
         int fb_width, fb_height;
         glfwGetFramebufferSize(window, &fb_width, &fb_height);
         glViewport(0, 0, fb_width, fb_height);
         return window;
+    }
+
+    GLFWwindow *_glfwCreateWindow(const char *title, int width, int height, GLFWframebuffersizefun callback)
+    {
+        glfwSetErrorCallback(glfwErrorCallback);
+
+        if(!glfwInit()){
+            return nullptr;
+        }
+
+        applyWindowHints(4);
+
+        GLFWwindow *window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+        if (window == nullptr)
+        {
+            std::cerr << "Failed to create GLFW window" << std::endl;
+            glfwTerminate();
+            return nullptr;
+        }
+        return finishWindowSetup(window, callback);
+    }
+
+    GLFWwindow *_glfwCreateFullscreenWindow(const char *title, int *out_width, int *out_height,
+                                            GLFWframebuffersizefun callback)
+    {
+        glfwSetErrorCallback(glfwErrorCallback);
+
+        if (!glfwInit())
+        {
+            return nullptr;
+        }
+
+        GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+        if (monitor == nullptr)
+        {
+            std::cerr << "Failed to get primary monitor" << std::endl;
+            glfwTerminate();
+            return nullptr;
+        }
+        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+        applyWindowHints(4);
+        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+        glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+        GLFWwindow *window = glfwCreateWindow(mode->width, mode->height, title, monitor, nullptr);
+        if (window == nullptr)
+        {
+            // Some GL stacks (e.g. llvmpipe/virgl) expose no multisampled
+            // configs; retry once without MSAA before giving up.
+            glfwWindowHint(GLFW_SAMPLES, 0);
+            window = glfwCreateWindow(mode->width, mode->height, title, monitor, nullptr);
+        }
+        if (window == nullptr)
+        {
+            std::cerr << "Failed to create fullscreen GLFW window" << std::endl;
+            glfwTerminate();
+            return nullptr;
+        }
+
+        if (out_width != nullptr)
+        {
+            *out_width = mode->width;
+        }
+        if (out_height != nullptr)
+        {
+            *out_height = mode->height;
+        }
+        return finishWindowSetup(window, callback);
     }
 
     void _glfwGetWindowContentScale(GLFWwindow *window, float* xscale, float* yscale)

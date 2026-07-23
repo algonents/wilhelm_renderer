@@ -46,6 +46,21 @@ pub fn glfw_create_window(
     window_pointer
 }
 
+/// Creates a fullscreen window on the primary monitor at its current video
+/// mode. Returns the window pointer and the actual (width, height).
+pub fn glfw_create_fullscreen_window(
+    title: &str,
+    callback: GLFWframebuffersizefun,
+) -> (*const GLFWwindow, i32, i32) {
+    let title_c_string = CString::new(title).expect("Failed to create title");
+    let mut width: i32 = 0;
+    let mut height: i32 = 0;
+    let window_pointer = unsafe {
+        sys::_glfwCreateFullscreenWindow(title_c_string.as_ptr(), &mut width, &mut height, callback)
+    };
+    (window_pointer, width, height)
+}
+
 pub fn glfw_get_window_content_scale(window: *const GLFWwindow) -> (f32, f32) {
     unsafe {
         let mut xs: f32 = 0.0;

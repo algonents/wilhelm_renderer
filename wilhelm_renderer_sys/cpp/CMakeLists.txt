@@ -11,9 +11,13 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-# Enable both Wayland and X11 support (GLFW selects backend at runtime)
+# Enable both Wayland and X11 support by default (GLFW selects backend at
+# runtime). Wayland-only targets (e.g. embedded kiosks without X11 headers)
+# can pass -DGLRENDERER_BUILD_X11=OFF; build.rs forwards the
+# GLRENDERER_BUILD_X11 environment variable.
+option(GLRENDERER_BUILD_X11 "Enable the GLFW X11 backend" ON)
 set(GLFW_BUILD_WAYLAND ON CACHE BOOL "" FORCE)
-set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE)
+set(GLFW_BUILD_X11 ${GLRENDERER_BUILD_X11} CACHE BOOL "" FORCE)
 
 add_subdirectory(glfw-3.4)
 

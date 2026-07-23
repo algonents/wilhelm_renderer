@@ -102,6 +102,13 @@ unsafe extern "C" {
         callback: GLFWframebuffersizefun,
     ) -> *const GLFWwindow;
 
+    pub fn _glfwCreateFullscreenWindow(
+        title: *const c_char,
+        out_width: *mut c_int,
+        out_height: *mut c_int,
+        callback: GLFWframebuffersizefun,
+    ) -> *const GLFWwindow;
+
     pub fn _glfwGetWindowContentScale(
         window: *const GLFWwindow,
         xscale: *mut c_float,
