@@ -1,5 +1,9 @@
 use std::env;
 
+fn env_off(val: &str) -> bool {
+    matches!(val.to_ascii_lowercase().as_str(), "0" | "off" | "false" | "no")
+}
+
 fn main() {
     if std::env::var("DOCS_RS").is_ok() {
         // don't build the native dependencies for doc generation
@@ -9,6 +13,7 @@ fn main() {
     println!("cargo:rerun-if-changed=cpp/glrenderer.cpp");
     println!("cargo:rerun-if-changed=cpp/glrenderer.h");
     println!("cargo:rerun-if-env-changed=GLRENDERER_BUILD_X11");
+    println!("cargo:rerun-if-env-changed=GLRENDERER_LINK_GL");
 
     // Publish the bundled GLFW include path so direct dependents (e.g.
     // wilhelm_renderer_imgui) can compile their own GLFW-using code against the
@@ -25,8 +30,15 @@ fn main() {
     // Allow Wayland-only builds (no X11 headers required), e.g. for embedded
     // kiosk targets: GLRENDERER_BUILD_X11=OFF disables the GLFW X11 backend.
     if let Ok(val) = env::var("GLRENDERER_BUILD_X11") {
-        let off = matches!(val.to_ascii_lowercase().as_str(), "0" | "off" | "false" | "no");
-        cmake_config.define("GLRENDERER_BUILD_X11", if off { "OFF" } else { "ON" });
+        cmake_config.define("GLRENDERER_BUILD_X11", if env_off(&val) { "OFF" } else { "ON" });
+    }
+
+    // GL functions are loaded at runtime by glad; EGL-only platforms whose
+    // Mesa ships no libGL (no GLX) set GLRENDERER_LINK_GL=OFF to skip the
+    // explicit libGL link.
+    let link_gl = !env::var("GLRENDERER_LINK_GL").is_ok_and(|v| env_off(&v));
+    if !link_gl {
+        cmake_config.define("GLRENDERER_LINK_GL", "OFF");
     }
 
     let dst = cmake_config.build();
@@ -50,7 +62,9 @@ fn main() {
             println!("cargo:rustc-link-lib=static=freetype");
         }
 
-        println!("cargo:rustc-link-lib=dylib=GL");
+        if link_gl {
+            println!("cargo:rustc-link-lib=dylib=GL");
+        }
         println!("cargo:rustc-link-lib=dylib=stdc++");
     } else if target.contains("apple") {
         println!(
