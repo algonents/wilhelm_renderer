@@ -65,20 +65,7 @@ Technical debt and improvement areas identified in code review.
 
 ## Performance
 
-### Cost Profile (at N shapes per frame)
-
-| Operation | Calls | Location |
-|-----------|-------|----------|
-| Shader switches | N | `renderer.rs:39` |
-| VAO binds | N | `renderer.rs:40` |
-| Uniform lookups | 5N | `renderer.rs:49,59,65,70,78` |
-| Uniform sets | 5N | `renderer.rs:51,62,67,73,81` |
-| Blend state setup | N (redundant) | `renderer.rs:42-43` |
-| Vertex attrib reset | N (redundant) | `renderer.rs:47` |
-| Projection matrix compute | N (identical) | `shaperenderable.rs:181` |
-| Draw calls | N | `renderer.rs:90` |
-
-At 1,000 shapes: ~13,000 OpenGL state changes per frame.
+For the per-frame cost profile, bottleneck rankings, and optimization potential estimates, see [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md#opengl-rendering-pipeline). This section tracks the actionable items only.
 
 ### Per-Frame Overhead (High Priority)
 
