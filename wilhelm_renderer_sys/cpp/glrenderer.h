@@ -8,6 +8,8 @@ extern "C"
 {
     // GFLW
     GLFWwindow *_glfwCreateWindow(const char *title, int width, int height, GLFWframebuffersizefun callback);
+    GLFWwindow *_glfwCreateFullscreenWindow(const char *title, int *out_width, int *out_height,
+                                            GLFWframebuffersizefun callback);
     void _glfwSetWindowUserPointer(GLFWwindow *window, void *pointer);
     void *_glfwGetWindowUserPointer(GLFWwindow *window);
 
