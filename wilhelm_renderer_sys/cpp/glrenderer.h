@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_MODULE_H
 
 extern "C"
 {
@@ -107,4 +108,8 @@ extern "C"
     void _ft_get_glyph_metrics(FT_Face face, FT_GlyphMetrics *metrics);
     unsigned char *_ft_get_glyph_bitmap(FT_Face face);
     int _ft_get_glyph_bitmap_pitch(FT_Face face);
+
+    // SDF rendering - requires a glyph loaded without FT_LOAD_RENDER
+    int _ft_render_glyph_sdf(FT_Face face);
+    int _ft_set_sdf_spread(FT_Library library, int spread);
 };

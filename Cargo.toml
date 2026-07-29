@@ -46,6 +46,7 @@ members = [
     "examples/markers",
     "examples/style_mutation",
     "examples/text",
+    "examples/text_sdf",
     "examples/transforms",
     "examples/triangle",
     "examples/waypoints",

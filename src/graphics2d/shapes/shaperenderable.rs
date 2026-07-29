@@ -253,6 +253,23 @@ fn text_shader() -> Rc<Shader> {
     })
 }
 
+thread_local! {
+    static SDF_TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
+}
+fn sdf_text_shader() -> Rc<Shader> {
+    SDF_TEXT_SHADER.with(|cell| {
+        cell.get_or_init(|| {
+            let vert_src = include_str!("../shaders/text.vert");
+            let frag_src = include_str!("../shaders/text_sdf.frag");
+            Rc::new(
+                Shader::compile(vert_src, frag_src, None)
+                    .expect("Failed to compile SDF text shader"),
+            )
+        })
+        .clone()
+    })
+}
+
 /// Font cache key: (font_path, font_size)
 type FontCacheKey = (String, u32);
 
@@ -281,11 +298,39 @@ fn get_or_create_font_atlas(font_path: &str, font_size: u32) -> Rc<RefCell<FontA
     })
 }
 
+thread_local! {
+    /// Cache for SDF font atlases, separate from the bitmap cache so the
+    /// existing bitmap path stays untouched. SDF glyphs carry 8px of spread
+    /// padding per side, so these atlases are allocated at 1024 instead of 512.
+    static SDF_FONT_CACHE: RefCell<HashMap<FontCacheKey, Rc<RefCell<FontAtlas>>>> = RefCell::new(HashMap::new());
+}
+
+/// Get or create an SDF FontAtlas from the cache
+fn get_or_create_sdf_font_atlas(font_path: &str, font_size: u32) -> Rc<RefCell<FontAtlas>> {
+    SDF_FONT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        let key = (font_path.to_string(), font_size);
+
+        if let Some(atlas) = cache.get(&key) {
+            return atlas.clone();
+        }
+
+        let atlas = FontAtlas::new_sdf(font_path, font_size, 1024)
+            .expect("Failed to create SDF font atlas");
+        let atlas_rc = Rc::new(RefCell::new(atlas));
+        cache.insert(key, atlas_rc.clone());
+        atlas_rc
+    })
+}
+
 /// Clear the font cache, releasing all FontAtlas resources.
 /// Call this when changing scenes or when fonts are no longer needed.
 /// Safe to call at any time - new text will recreate atlases as needed.
 pub fn clear_font_cache() {
     FONT_CACHE.with(|cache| {
+        cache.borrow_mut().clear();
+    });
+    SDF_FONT_CACHE.with(|cache| {
         cache.borrow_mut().clear();
     });
 }
@@ -1068,7 +1113,33 @@ impl ShapeRenderable {
 
     fn text(text: Text, color: Color, anchor: Anchor) -> Self {
         let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size);
+        Self::text_with_atlas(text, color, anchor, font_atlas, text_shader())
+    }
 
+    /// Create a text renderable backed by a signed-distance-field atlas.
+    ///
+    /// Unlike bitmap text, SDF text stays sharp under arbitrary `set_scale`
+    /// factors, at the cost of slightly rounded corners at extreme
+    /// magnification. Prototype API: production integration into `Text` /
+    /// `ShapeStyle` is tracked in docs/SDF_FONTS.md.
+    pub fn text_sdf(
+        content: impl Into<String>,
+        font_path: impl Into<String>,
+        font_size: u32,
+        color: Color,
+    ) -> Self {
+        let text = Text::new(content, font_path, font_size);
+        let font_atlas = get_or_create_sdf_font_atlas(&text.font_path, text.font_size);
+        Self::text_with_atlas(text, color, Anchor::Default, font_atlas, sdf_text_shader())
+    }
+
+    fn text_with_atlas(
+        text: Text,
+        color: Color,
+        anchor: Anchor,
+        font_atlas: Rc<RefCell<FontAtlas>>,
+        shader: Rc<Shader>,
+    ) -> Self {
         // Generate raw glyph vertices and compute the bbox in one pass.
         let (mut vertices, bbox_min, bbox_max, texture_id) = {
             let mut atlas = font_atlas.borrow_mut();
@@ -1096,7 +1167,6 @@ impl ShapeRenderable {
         geometry.add_vertex_attribute(Attribute::new(0, 2, 4, 0));
         geometry.add_vertex_attribute(Attribute::new(1, 2, 4, 2));
 
-        let shader = text_shader();
         let mut mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
         mesh.color = Some(color);
 

@@ -26,6 +26,8 @@ pub struct GlyphMetrics {
 
 /// FreeType load flags
 pub const FT_LOAD_RENDER: c_int = 4;
+/// Load the glyph outline without rendering it (for SDF rendering)
+pub const FT_LOAD_DEFAULT: c_int = 0;
 
 unsafe extern "C" {
     pub fn _ft_init_freetype(library: *mut FT_Library) -> c_int;
@@ -44,4 +46,7 @@ unsafe extern "C" {
     pub fn _ft_get_glyph_metrics(face: FT_Face, metrics: *mut GlyphMetrics);
     pub fn _ft_get_glyph_bitmap(face: FT_Face) -> *const c_uchar;
     pub fn _ft_get_glyph_bitmap_pitch(face: FT_Face) -> c_int;
+
+    pub fn _ft_render_glyph_sdf(face: FT_Face) -> c_int;
+    pub fn _ft_set_sdf_spread(library: FT_Library, spread: c_int) -> c_int;
 }

@@ -538,4 +538,16 @@ extern "C"
     {
         return face->glyph->bitmap.pitch;
     }
+
+    int _ft_render_glyph_sdf(FT_Face face)
+    {
+        return FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
+    }
+
+    int _ft_set_sdf_spread(FT_Library library, int spread)
+    {
+        // Padding in pixels around the glyph ink box. Valid range 2..32, FreeType default 8.
+        FT_Int value = spread;
+        return FT_Property_Set(library, "sdf", "spread", &value);
+    }
 }

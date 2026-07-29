@@ -4,7 +4,8 @@
 
 use crate::core::engine::freetype::{
     done_face, done_freetype, get_glyph_bitmap, get_glyph_metrics, init_freetype, load_char,
-    new_face, set_pixel_sizes, FT_Face, FT_Library,
+    load_char_outline, new_face, render_glyph_sdf, set_pixel_sizes, set_sdf_spread, FT_Face,
+    FT_Library,
 };
 use crate::core::engine::opengl::{
     gl_bind_texture, gl_delete_texture, gl_gen_texture, gl_pixel_storei, gl_tex_image_2d,
@@ -48,6 +49,8 @@ pub struct FontAtlas {
     glyphs: HashMap<char, GlyphInfo>,
     /// Font size in pixels
     font_size: u32,
+    /// Whether glyphs are stored as signed distance fields
+    sdf: bool,
 }
 
 impl FontAtlas {
@@ -58,8 +61,31 @@ impl FontAtlas {
     /// * `font_size` - Font size in pixels
     /// * `atlas_size` - Size of the texture atlas (width and height, must be power of 2)
     pub fn new(font_path: &str, font_size: u32, atlas_size: u32) -> Result<Self, String> {
+        Self::with_mode(font_path, font_size, atlas_size, false)
+    }
+
+    /// Create a new font atlas that stores glyphs as signed distance fields.
+    ///
+    /// SDF glyphs stay sharp under arbitrary scaling but must be drawn with an
+    /// SDF-aware shader (edge at texel value 0.5). Each glyph bitmap is padded
+    /// by the SDF spread (8 pixels) on every side, so prefer a larger
+    /// `atlas_size` than for a bitmap atlas of the same font size.
+    pub fn new_sdf(font_path: &str, font_size: u32, atlas_size: u32) -> Result<Self, String> {
+        Self::with_mode(font_path, font_size, atlas_size, true)
+    }
+
+    fn with_mode(
+        font_path: &str,
+        font_size: u32,
+        atlas_size: u32,
+        sdf: bool,
+    ) -> Result<Self, String> {
         // Initialize FreeType
         let library = init_freetype().map_err(|e| format!("Failed to init FreeType: {}", e))?;
+
+        if sdf {
+            set_sdf_spread(library, 8).map_err(|e| format!("Failed to set SDF spread: {}", e))?;
+        }
 
         // Load font face
         let face =
@@ -104,7 +130,13 @@ impl FontAtlas {
             row_height: 0,
             glyphs: HashMap::new(),
             font_size,
+            sdf,
         })
+    }
+
+    /// Whether this atlas stores glyphs as signed distance fields
+    pub fn is_sdf(&self) -> bool {
+        self.sdf
     }
 
     /// Get the OpenGL texture ID
@@ -126,7 +158,14 @@ impl FontAtlas {
     /// Cache a glyph into the atlas
     fn cache_glyph(&mut self, ch: char) -> Option<GlyphInfo> {
         // Load the glyph
-        if load_char(self.face, ch).is_err() {
+        if self.sdf {
+            if load_char_outline(self.face, ch).is_err() {
+                return None;
+            }
+            // Rendering an empty outline (e.g. space) can fail; fall through so
+            // the empty-glyph branch below still records the advance.
+            let _ = render_glyph_sdf(self.face);
+        } else if load_char(self.face, ch).is_err() {
             return None;
         }
 
