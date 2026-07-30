@@ -108,9 +108,48 @@ Deliberately not built:
   anyone writing shader effects that assume the full range.
 - Package growth measured: ~38 KB compressed; sys crate at 2.1 MiB total.
 
+## Path to master & crates.io release
+
+The functional work list above makes the feature *good*; this list is what
+a merge to master and a release actually require, in order:
+
+1. **API decision before merge**: everything merged to master ships as
+   public API on the next release. Either complete work-list item 1
+   (`Text`/`ShapeStyle` integration) first, or consciously release
+   `ShapeRenderable::text_sdf()`, `FontAtlas::new_sdf`/`is_sdf`, and the
+   three new freetype wrappers as a documented-experimental API that may
+   change. The prototype's rustdoc on `text_sdf()` already flags this.
+2. **Version bumps** (two-crate convention, see commit ab14a8a):
+   - `wilhelm_renderer_sys` 0.11.0 → **0.12.0** — it gained public FFI
+     (`_ft_render_glyph_sdf`, `_ft_set_sdf_spread`, `FT_LOAD_DEFAULT`)
+     and bundled C sources.
+   - `wilhelm_renderer` 0.13.0 → **0.14.0**, updating the exact pin in
+     the root `Cargo.toml` to `version = "=0.12.0"`.
+3. **CHANGELOG.md**: entry for 0.14.0 — SDF text (with a usage snippet,
+   matching the house style), the restored FreeType sdf module, and the
+   behavior change that `Shader::compile` now returns `Err` on compile
+   failure instead of silently linking (technically observable by users
+   who compile their own shaders).
+4. **Doc sweep**: `docs/ROADMAP.md` (the "text labels readable at all
+   zoom levels" criterion is now met; add batching note for SDF text —
+   same unbatched-draw caveat as bitmap text per `docs/TODO.md`),
+   `docs/PRIMITIVES.md` (Text row), `docs/OPENGL.md` (SDF listed as a
+   "next step" — done), `CLAUDE.md` (FreeType removed-modules list no
+   longer includes sdf).
+5. **Release verification**: `cargo package -p wilhelm_renderer_sys`
+   *with verify* (the `--no-verify` run measured 2.1 MiB compressed, 516
+   files, sdf sources included — no exclude-list change needed); then
+   publish sys first, then the main crate. docs.rs is unaffected
+   (`build.rs` skips the native build under `DOCS_RS`).
+6. **Platform check**: the sdf module is upstream FreeType built via the
+   same CMake path on all three platforms, so no linking changes are
+   expected — but run the macOS and Windows CI/builds before publishing;
+   only Linux has been built and tested on this branch.
+
 ## Rough sizing
 
 Prototype: done (this branch). Production integration (work list items
 1–5): small — the heavy lifting (native module, FFI, atlas, shader) is
 this branch; what remains is Rust API design plus the usual
-examples/docs/CHANGELOG pass.
+examples/docs/CHANGELOG pass. Release mechanics: the checklist above,
+dominated by the API decision in step 1.
