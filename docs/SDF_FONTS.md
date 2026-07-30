@@ -75,26 +75,95 @@ Deliberately not built:
 - No halo/outline/bold effects (near-free follow-ups, see below).
 - No unification of the bitmap and SDF font caches.
 
-## Production work list
+## Integration plan: prototype → framework feature
 
-1. **API integration**: an SDF flag on `Text` (breaking enum/struct change)
-   or a `TextStyle`/`ShapeStyle` field, so the builder + anchor path works
-   for SDF text. Prototype's `text_sdf()` bypasses anchors.
-2. **Cache key**: unify font caches on `(path, size, mode)`.
-3. **Atlas policy**: one rasterization size per font (e.g. 48px) reused at
-   all display sizes via `u_scale`, replacing per-size atlases; decide
-   atlas growth/eviction.
-4. **Small text**: below ~14px, hinted bitmap rendering is sharper than
-   SDF; keep the bitmap path for small fixed-size text (visible in the
-   demo's 10px row).
-5. **Label effects**: halo/outline/bold are one uniform + a few shader
-   lines each (`dist` thresholds) — high value for radar label
-   decluttering.
-6. **Shader diagnostics**: bind `glGetProgramiv`/`glGetProgramInfoLog` for
-   link-status checking.
-7. Optional: register `ft_bitmap_sdf_renderer_class` (bsdf) if SDF from
-   pre-rendered bitmaps is ever needed; it compiles inside `sdf.c` today
-   but is unregistered.
+What it takes for SDF text to stop being a side door and become the
+framework's text rendering, in dependency order.
+
+### 1. API design (the gate — everything else hangs off it)
+
+The prototype's `ShapeRenderable::text_sdf()` bypasses the
+`from_shape`/builder path, so SDF text has no anchors, no style mutation,
+and a bolted-on signature. Production folds the mode into the normal path:
+
+- Put the mode on `Text` (where font path/size already live): a
+  `Text::new_sdf(...)` constructor or `.with_sdf()` builder setting a new
+  field. Note `Text`'s fields are `pub`, so adding a field breaks
+  struct-literal construction — acceptable pre-1.0, but batch it with any
+  other `Text` changes (e.g. multi-line) to break once.
+- Dispatch inside `ShapeRenderable::from_shape` / `text()`: select
+  `(font cache, shader)` by mode. Anchors, `ShapeStyle.fill`, the builder,
+  and style mutation then work identically for both modes with no further
+  code. Delete `text_sdf()` (or keep it as a thin convenience wrapper).
+
+### 2. One atlas serves all sizes (the actual payoff)
+
+Today the cache key is `(path, size)` even in SDF mode, so two SDF sizes
+still build two atlases. Production:
+
+- Rasterize each font once at a canonical SDF size (48px); cache key for
+  SDF becomes `(path)` (bitmap keeps `(path, size)`); unify both maps
+  into one keyed `(path, size, mode)` with a canonicalized size for SDF.
+- Bake the intrinsic factor `requested_size / canonical_size` into the
+  vertex positions at build time (in `text_raw_vertices`, which currently
+  assumes atlas size == display size), so `u_scale` stays purely the
+  user's zoom control and `set_scale` semantics don't change.
+- `measure_text` must report metrics at the *requested* size.
+- Derive atlas texture size from `canonical_size + 2×spread` and charset
+  instead of the hardcoded 512/1024, and decide the atlas-full strategy
+  (grow, page, or evict — today it just prints "atlas full").
+
+### 3. Size-based routing (small text)
+
+Below ~14px, hinted bitmaps are sharper than SDF (visible in the demo's
+10px row). Add an automatic policy: requested sizes under a threshold use
+the bitmap path even when SDF is requested, with an override. Radar labels
+at fixed small sizes keep hinting; anything zoomable gets SDF.
+
+### 4. Label effects (why SDF is worth it beyond sharpness)
+
+Halo, outline, and bold are each one uniform plus a few `smoothstep`
+thresholds in `text_sdf.frag` — high value for CWP label decluttering.
+Needs: a `TextStyle` (or `ShapeStyle` extension) carrying halo
+color/width, uniform plumbing in `renderer.rs` (which currently re-looks
+up uniform locations by string every draw — cache locations while there,
+see PERFORMANCE_ANALYSIS.md), and a demo.
+
+### 5. Rotation
+
+`text.vert` has no `u_rotation`, so rotated text silently doesn't rotate —
+a pre-existing defect both text modes share. Rotated labels (leader lines,
+map-aligned annotations) need it; add the same rotation handling the shape
+shader has.
+
+### 6. Robustness and diagnostics
+
+- Bind `glGetProgramiv`/`glGetProgramInfoLog`; finish link-status checking
+  in `Shader::compile` (compile-status was re-enabled on this branch).
+- Fix the GLFW init crash found during this work: connect failure to the
+  Wayland socket segfaults instead of returning an error.
+- Optional: register `ft_bitmap_sdf_renderer_class` (bsdf) if SDF from
+  pre-rendered bitmaps is ever wanted; it compiles inside `sdf.c` today
+  but is unregistered.
+
+### 7. Batching (design for it, don't block on it)
+
+Text is still one draw call per string (`docs/TODO.md`). A single SDF
+atlas per font makes glyph-level batching *more* tractable (all sizes
+share one texture, so one instanced draw can cover every label). Not part
+of this integration, but the API above shouldn't preclude it — which is
+another reason to prefer per-font canonical atlases over per-size ones.
+
+### Done means
+
+- `Text` renders via the builder with anchors and style mutation in both
+  modes; one SDF atlas per font serves every display size.
+- A zoomable demo (e.g. `waypoints`) shows labels crisp across the full
+  zoom range; a halo demo exists.
+- Unit tests cover cache keying, `measure_text` at non-canonical sizes,
+  and the size-routing threshold.
+- Existing bitmap-text behavior is pixel-identical for callers that never
+  opt into SDF.
 
 ## Trade-offs & watch-items
 
@@ -114,7 +183,7 @@ The functional work list above makes the feature *good*; this list is what
 a merge to master and a release actually require, in order:
 
 1. **API decision before merge**: everything merged to master ships as
-   public API on the next release. Either complete work-list item 1
+   public API on the next release. Either complete integration step 1
    (`Text`/`ShapeStyle` integration) first, or consciously release
    `ShapeRenderable::text_sdf()`, `FontAtlas::new_sdf`/`is_sdf`, and the
    three new freetype wrappers as a documented-experimental API that may
@@ -148,8 +217,8 @@ a merge to master and a release actually require, in order:
 
 ## Rough sizing
 
-Prototype: done (this branch). Production integration (work list items
-1–5): small — the heavy lifting (native module, FFI, atlas, shader) is
-this branch; what remains is Rust API design plus the usual
-examples/docs/CHANGELOG pass. Release mechanics: the checklist above,
-dominated by the API decision in step 1.
+Prototype: done (this branch). Integration steps 1–5: small-to-moderate —
+the heavy lifting (native module, FFI, atlas, shader) is this branch;
+step 2 (canonical-size atlases and layout scaling) is the only part with
+real design depth, the rest is mechanical Rust API work. Release
+mechanics: the checklist above, dominated by the API decision in step 1.
