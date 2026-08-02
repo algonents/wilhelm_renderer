@@ -29,7 +29,10 @@ fn create_equilateral_triangle() -> [(f32, f32); 3] {
 }
 
 fn build_app() -> App<'static> {
-    let window = Window::new("Shapes", 800, 800, Color::from_rgb(0.07, 0.13, 0.17));
+    // Fullscreen: the canvas is the "monitor" — the backend sizes the GL
+    // context to the canvas, which the glue keeps matched to the browser
+    // window (including live resize via wilhelm_dispatch_resize).
+    let window = Window::new_fullscreen("Shapes", Color::from_rgb(0.07, 0.13, 0.17));
     let mut app = App::new(window);
 
     let polyline_points = vec![(0.0, 0.0), (50.0, 130.0), (100.0, 110.0), (100.0, 200.0)];

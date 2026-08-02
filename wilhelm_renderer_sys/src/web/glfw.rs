@@ -160,3 +160,22 @@ pub unsafe fn _glfwGetWindowSize(
 pub unsafe fn _glfwGetPlatform() -> c_int {
     GLFW_PLATFORM_NULL
 }
+
+/// Called by the JS glue when the canvas is resized (e.g. the browser
+/// window changed size). Dispatches the stored GLFW-style callbacks in the
+/// same order native GLFW does: framebuffer size first (drives
+/// `glViewport`), then window size (updates `Window` state and fires the
+/// user's `on_resize`). The callbacks are the upper crate's existing
+/// `extern "C"` trampolines — no upper-crate changes needed.
+#[no_mangle]
+pub extern "C" fn wilhelm_dispatch_resize(width: i32, height: i32) {
+    type SizeFn = extern "C" fn(*const GLFWwindow, i32, i32);
+
+    for slot in [&CB_FRAMEBUFFER_SIZE, &CB_WINDOW_SIZE] {
+        let raw = slot.load(Ordering::Relaxed);
+        if raw != 0 {
+            let f: SizeFn = unsafe { std::mem::transmute(raw) };
+            f(CANVAS_WINDOW, width, height);
+        }
+    }
+}

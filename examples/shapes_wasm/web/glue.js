@@ -17,6 +17,13 @@
   const canvas = document.getElementById("wilhelm-canvas");
   const utf8 = new TextDecoder();
 
+  // Fullscreen: the canvas is the "monitor". Size it to the browser window
+  // before the module starts so _glfwCreateFullscreenWindow sees the real
+  // dimensions; keep it matched on window resize (dispatched to the
+  // engine's GLFW-style callbacks via wilhelm_dispatch_resize).
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
   let gl = null;
   let memory = null;
 
@@ -208,6 +215,13 @@
     .then(({ instance }) => {
       memory = instance.exports.memory;
       instance.exports.wasm_init();
+
+      window.addEventListener("resize", () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        instance.exports.wilhelm_dispatch_resize(canvas.width, canvas.height);
+      });
+
       const loop = () => {
         instance.exports.wasm_frame();
         requestAnimationFrame(loop);
