@@ -1,11 +1,19 @@
-# WebAssembly / Multi-Backend Architecture — Feasibility & Direction
+# WebAssembly Backend — Design
 
 Status: **direction decided, implementation not scheduled** (2026-08-02).
-Assessed on `feat/wasm` with no engine code changes. Decision: **Path B —
-one Rust client API, multiple backends behind a frozen FFI contract**, with
-the browser (WebGL2) as the second backend. Emscripten was assessed and
-rejected (see "Paths considered"). Precursor work can land on master
-independently of any WASM code.
+Assessed on `feat/wasm` with no engine code changes. Decision: **one Rust
+client API, multiple backends behind a frozen FFI contract**, with the
+browser (WebGL2) as the second backend, implemented in pure Rust on
+`wasm32-unknown-unknown`.
+
+**Emscripten was considered and rejected for certification reasons.** It
+would compile the bundled C++/GLFW/FreeType stack to WASM behind a
+GL→WebGL translation runtime and GLFW emulation layer — a large body of
+third-party code sitting *between* the verified boundary and the screen,
+which we neither own nor can qualify. `web-sys`/`wasm-bindgen` were
+rejected on the same grounds (large dependency tree vs the minimal-deps
+policy, `docs/DESIGN.md`). Instead we own every line on both sides of the
+boundary: a Rust backend plus a small hand-written JS glue file.
 
 ## Problem
 
@@ -29,10 +37,9 @@ it just isn't documented as one.
 
 Decisions:
 
-- **Path B** — reimplement the sys-crate contract for `wasm32-unknown-unknown`
-  in pure Rust + a small hand-written JS glue file. No Emscripten, no
-  `web-sys`/`wasm-bindgen` dependency: we own every line on both sides of
-  the boundary (minimal-deps certification policy, `docs/DESIGN.md`).
+- **Pure-Rust browser backend** — reimplement the sys-crate contract for
+  `wasm32-unknown-unknown` in Rust + a small hand-written JS glue file.
+  No Emscripten, no `web-sys`/`wasm-bindgen` dependency.
 - **Contract floor = OpenGL ES 3.0.** Backends may *implement* the contract
   on any underlying API version; the contract itself promises only
   ES 3.0-expressible behavior. See "Why ES 3.0".
@@ -97,7 +104,7 @@ safety-critical profile, and browsers run WebGL2 on ANGLE (D3D/Metal/
 Vulkan) anyway. If WebGPU ever becomes a requirement, that is a deliberate
 contract-v2 decision, not a backend addition.
 
-## How a backend is implemented (Path B mechanics)
+## How the backend is implemented
 
 Today, "backend" = whoever provides the 87 symbols to the linker: the
 upper crate calls `sys::_glDrawArrays(...)`; the sys crate *declares* it
@@ -196,8 +203,8 @@ once in GLSL ES 3.00** (`#version 300 es` + precision qualifiers — legal
 no-ops in desktop GLSL), and the *native backend* rewrites the version
 header inside `_glShaderSource`. The client crate hands over identical
 source on every target; no target-conditional code above the boundary.
-(The earlier idea of rewriting headers in `Shader::compile` is rejected —
-it would put target branching in the verified layer.)
+(Rewriting headers in `Shader::compile` is rejected — it would put target
+branching in the verified layer.)
 
 ### 4. Unsized `GL_RED` internalformat in the font atlas (precursor, on master)
 
@@ -208,9 +215,9 @@ The `glTexSubImage2D` upload path (`GL_RED` as *format*) is already correct.
 
 ### 5. Blocking main loop
 
-`src/core/app.rs:142-176` — see "Path B mechanics" above for the
-`frame()` extraction. Note `examples/keyboard` hand-rolls its own blocking
-loop and would need rewriting onto `App`.
+`src/core/app.rs:142-176` — see "How the backend is implemented" above for
+the `frame()` extraction. Note `examples/keyboard` hand-rolls its own
+blocking loop and would need rewriting onto `App`.
 
 ### 6. Path-based asset loading
 
@@ -233,8 +240,8 @@ module; these want to become recoverable.
 ### 7. Build system
 
 `wilhelm_renderer_sys/build.rs` dispatches on linux/apple/windows only.
-Under Path B the wasm branch is trivial: **skip CMake entirely** (no C is
-built), same pattern as the `DOCS_RS` early-return (`build.rs:8-11`).
+The wasm branch is trivial: **skip CMake entirely** (no C is built), same
+pattern as the `DOCS_RS` early-return (`build.rs:8-11`).
 
 ### 8. `image` crate default features (precursor, on master)
 
@@ -265,21 +272,6 @@ Explicitly checked and **absent** (each would have been a real problem):
 sRGB enums, double-precision uniforms, UBOs, transform feedback. All
 vertex attributes go through VBOs. Multiple windows, clipboard, gamma,
 cursors, joystick: unused.
-
-## Paths considered
-
-**Path A — Emscripten** (`wasm32-unknown-emscripten`) was assessed and
-rejected. It compiles the bundled C++/GLFW/FreeType stack to WASM with
-GL→WebGL translation, GLFW emulation, and a virtual FS — the short path
-for a demo. Rejected because it inverts under the certification lens: it
-inserts a large third-party translation runtime *between* the tested
-boundary and the screen — unauditable, unqualifiable, and owned by
-nobody in this project. With Path B decided, even an Emscripten
-*spike* validates a destination we aren't going to; a thin vertical slice
-of the real backend costs barely more and wastes nothing.
-
-**Path B — pure Rust backend** (`wasm32-unknown-unknown`, hand-rolled
-glue): adopted. See "How a backend is implemented".
 
 ## Proof-of-concept spike plan (not executed)
 
