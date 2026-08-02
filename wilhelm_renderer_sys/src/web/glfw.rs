@@ -179,3 +179,17 @@ pub extern "C" fn wilhelm_dispatch_resize(width: i32, height: i32) {
         }
     }
 }
+
+/// Called by the JS glue on canvas wheel events. Offsets follow GLFW
+/// conventions: y_offset positive = scroll up/away (the glue negates the
+/// DOM's deltaY, which has the opposite sign).
+#[no_mangle]
+pub extern "C" fn wilhelm_dispatch_scroll(x_offset: f64, y_offset: f64) {
+    type ScrollFn = extern "C" fn(*const GLFWwindow, f64, f64);
+
+    let raw = CB_SCROLL.load(Ordering::Relaxed);
+    if raw != 0 {
+        let f: ScrollFn = unsafe { std::mem::transmute(raw) };
+        f(CANVAS_WINDOW, x_offset, y_offset);
+    }
+}

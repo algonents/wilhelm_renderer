@@ -46,6 +46,7 @@ members = [
     "examples/rotations",
     "examples/shapes",
     "examples/shapes_scaled",
+    "examples/shapes_scaled_wasm",
     "examples/shapes_wasm",
     "examples/markers",
     "examples/style_mutation",
