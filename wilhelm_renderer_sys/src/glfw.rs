@@ -3,10 +3,17 @@
 //! All extern declarations, types, and constants used by `wilhelm_renderer`.
 //! Safe Rust wrappers live in the upper crate.
 
+// These C types appear only in the native extern declarations below;
+// the wasm backend implementations import their own.
+#[cfg(not(target_arch = "wasm32"))]
 use std::ffi::c_float;
+#[cfg(not(target_arch = "wasm32"))]
 use std::ffi::c_void;
+#[cfg(not(target_arch = "wasm32"))]
 use std::os::raw::c_char;
+#[cfg(not(target_arch = "wasm32"))]
 use std::os::raw::c_double;
+#[cfg(not(target_arch = "wasm32"))]
 use std::os::raw::c_int;
 
 pub const GLFW_SAMPLES: i32 = 0x0002100D;
@@ -94,6 +101,10 @@ pub const GLFW_KEY_RIGHT_CONTROL: i32 = 345;
 pub const GLFW_KEY_RIGHT_ALT: i32 = 346;
 pub const GLFW_KEY_RIGHT_SUPER: i32 = 347;
 
+#[cfg(target_arch = "wasm32")]
+pub use crate::web::glfw::*;
+
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub fn _glfwCreateWindow(
         title: *const c_char,

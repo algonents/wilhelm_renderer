@@ -25,7 +25,10 @@ exclude = [
 ]
 
 [dependencies]
-image = "0.25.6"
+# default-features off: the defaults pull in rayon (no wasm support) and the
+# rav1e AV1 encoder — ~130 extra lockfile packages. PNG is the only format
+# the engine and examples use (see docs/DESIGN_WASM.md item 8).
+image = { version = "0.25.6", default-features = false, features = ["png"] }
 wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.11.0" }
 
 [workspace]
@@ -43,6 +46,7 @@ members = [
     "examples/rotations",
     "examples/shapes",
     "examples/shapes_scaled",
+    "examples/shapes_wasm",
     "examples/markers",
     "examples/style_mutation",
     "examples/text",

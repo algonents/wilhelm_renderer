@@ -9,6 +9,11 @@ fn main() {
         // don't build the native dependencies for doc generation
         return;
     }
+    if env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("wasm32") {
+        // Browser backend: pure Rust + JS glue, no C is built or linked
+        // (see docs/DESIGN_WASM.md). Skip CMake entirely.
+        return;
+    }
     println!("cargo:rerun-if-changed=cpp/CMakeLists.txt");
     println!("cargo:rerun-if-changed=cpp/glrenderer.cpp");
     println!("cargo:rerun-if-changed=cpp/glrenderer.h");

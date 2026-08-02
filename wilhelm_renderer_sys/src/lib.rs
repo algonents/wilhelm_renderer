@@ -8,3 +8,6 @@
 pub mod freetype;
 pub mod glfw;
 pub mod opengl;
+
+#[cfg(target_arch = "wasm32")]
+mod web;

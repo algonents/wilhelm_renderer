@@ -13,11 +13,13 @@ pub struct App<'a> {
     pre_render_callback: Option<Box<dyn FnMut(&mut [ShapeRenderable], &Renderer) + 'a>>,
     render_callback: Option<Box<dyn FnMut(&Renderer, Option<&Camera2D>) + 'a>>,
     camera_controller: Option<Rc<RefCell<CameraController>>>,
+    last_time: f64,
 }
 
 impl<'a> App<'a> {
     pub fn new(window: Box<Window>) -> Self {
         let renderer = Renderer::new(window.handle());
+        let last_time = renderer.get_time();
         Self {
             window,
             renderer,
@@ -25,6 +27,7 @@ impl<'a> App<'a> {
             pre_render_callback: None,
             render_callback: None,
             camera_controller: None,
+            last_time,
         }
     }
 
@@ -139,39 +142,46 @@ impl<'a> App<'a> {
         }
     }
 
+    /// Renders a single frame: camera update, clear, callbacks, shape draw,
+    /// present. On native, [`run`](Self::run) drives this in a loop; on the
+    /// browser backend the host page drives it from `requestAnimationFrame`.
+    pub fn frame(&mut self) {
+        let now = self.renderer.get_time();
+        let dt = (now - self.last_time) as f32;
+        self.last_time = now;
+
+        if let Some(ctrl) = &self.camera_controller {
+            ctrl.borrow_mut().update(dt);
+        }
+
+        self.window.clear_color();
+
+        if let Some(cb) = self.pre_render_callback.as_mut() {
+            cb(&mut self.shapes, &self.renderer);
+        }
+
+        self.shapes.sort_by_key(|s| s.z_order());
+
+        for shape in &mut self.shapes {
+            shape.render(&self.renderer);
+        }
+
+        if let Some(cb) = self.render_callback.as_mut() {
+            let camera = self.camera_controller.as_ref().map(|ctrl| {
+                *ctrl.borrow().camera()
+            });
+            cb(&self.renderer, camera.as_ref());
+        }
+
+        self.window.swap_buffers();
+        self.window.poll_events();
+    }
+
     pub fn run(mut self) {
-        let mut last_time = self.renderer.get_time();
+        self.last_time = self.renderer.get_time();
 
         while !self.window.window_should_close() {
-            let now = self.renderer.get_time();
-            let dt = (now - last_time) as f32;
-            last_time = now;
-
-            if let Some(ctrl) = &self.camera_controller {
-                ctrl.borrow_mut().update(dt);
-            }
-
-            self.window.clear_color();
-
-            if let Some(cb) = self.pre_render_callback.as_mut() {
-                cb(&mut self.shapes, &self.renderer);
-            }
-
-            self.shapes.sort_by_key(|s| s.z_order());
-
-            for shape in &mut self.shapes {
-                shape.render(&self.renderer);
-            }
-
-            if let Some(cb) = self.render_callback.as_mut() {
-                let camera = self.camera_controller.as_ref().map(|ctrl| {
-                    *ctrl.borrow().camera()
-                });
-                cb(&self.renderer, camera.as_ref());
-            }
-
-            self.window.swap_buffers();
-            self.window.poll_events();
+            self.frame();
         }
     }
 }

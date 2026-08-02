@@ -3,7 +3,11 @@
 //! All extern declarations, types, and constants used by `wilhelm_renderer`.
 //! Safe Rust wrappers live in the upper crate.
 
-use std::ffi::{c_int, c_long, c_uchar, c_uint, c_ulong};
+use std::ffi::{c_int, c_long};
+// Used only by the native extern declarations below; the wasm backend
+// implementations import their own.
+#[cfg(not(target_arch = "wasm32"))]
+use std::ffi::{c_uchar, c_uint, c_ulong};
 
 /// Opaque FreeType library handle
 #[allow(non_camel_case_types)]
@@ -27,6 +31,10 @@ pub struct GlyphMetrics {
 /// FreeType load flags
 pub const FT_LOAD_RENDER: c_int = 4;
 
+#[cfg(target_arch = "wasm32")]
+pub use crate::web::freetype::*;
+
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub fn _ft_init_freetype(library: *mut FT_Library) -> c_int;
     pub fn _ft_done_freetype(library: FT_Library);

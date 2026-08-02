@@ -85,6 +85,10 @@ pub const GL_MULTISAMPLE: GLuint = 0x809D;
 pub const GL_SAMPLES: GLuint = 0x80A9;
 pub const GL_UNPACK_ALIGNMENT: GLenum = 0x0CF5;
 
+#[cfg(target_arch = "wasm32")]
+pub use crate::web::opengl::*;
+
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub fn _glClearColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
     pub fn _glViewPort(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
