@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>wilhelm_renderer — bouncing balls (WebAssembly)</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="wilhelm-canvas"></canvas>
+  <script>window.WILHELM_WASM = "bouncing_balls_wasm.wasm";</script>
+  <script src="glue.js"></script>
+</body>
+</html>
