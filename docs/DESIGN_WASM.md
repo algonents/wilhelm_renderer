@@ -273,6 +273,18 @@ sRGB enums, double-precision uniforms, UBOs, transform feedback. All
 vertex attributes go through VBOs. Multiple windows, clipboard, gamma,
 cursors, joystick: unused.
 
+## Companion crate: wilhelm_renderer_imgui
+
+`wilhelm_renderer_imgui` is **native-only by construction and stays that
+way**. It bundles the Dear ImGui C++ sources with the `imgui_impl_glfw` /
+`imgui_impl_opengl3` backends, which call the real GLFW window and real GL
+context directly — it consumes the native backend's implementation, not
+the 87-symbol contract, and sits outside the certification boundary by
+design (its library code doesn't use the safe API). Nothing in this plan
+affects it on desktop. On the web there is no equivalent and none is
+needed: **browser UI is handled by the web layer** — HTML/DOM around the
+canvas — not by porting an immediate-mode C++ UI into the wasm module.
+
 ## Proof-of-concept spike plan (not executed)
 
 Goal: `examples/shapes` minus text/images — pure geometry — rendering in a
