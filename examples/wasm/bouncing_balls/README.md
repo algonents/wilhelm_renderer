@@ -14,9 +14,9 @@ See `docs/DESIGN_WASM.md`.
 ```bash
 # from the repo root
 cargo build -p bouncing_balls_wasm --target wasm32-unknown-unknown --release
-cp target/wasm32-unknown-unknown/release/bouncing_balls_wasm.wasm examples/bouncing_balls_wasm/web/
+cp target/wasm32-unknown-unknown/release/bouncing_balls_wasm.wasm examples/wasm/bouncing_balls/web/
 
-python3 -m http.server 8000 --directory examples/bouncing_balls_wasm/web
+python3 -m http.server 8000 --directory examples/wasm/bouncing_balls/web
 # open http://localhost:8000
 ```
 

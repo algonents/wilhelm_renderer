@@ -12,10 +12,10 @@ Scene = the native `examples/shapes` minus text, images, and points
 ```bash
 # from the repo root
 cargo build -p shapes_wasm --target wasm32-unknown-unknown --release
-cp target/wasm32-unknown-unknown/release/shapes_wasm.wasm examples/shapes_wasm/web/
+cp target/wasm32-unknown-unknown/release/shapes_wasm.wasm examples/wasm/shapes/web/
 
 # serve the page (any static server works)
-python3 -m http.server 8000 --directory examples/shapes_wasm/web
+python3 -m http.server 8000 --directory examples/wasm/shapes/web
 # open http://localhost:8000
 ```
 

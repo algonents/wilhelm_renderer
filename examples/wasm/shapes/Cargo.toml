@@ -1,5 +1,5 @@
 [package]
-name = "shapes_scaled_wasm"
+name = "shapes_wasm"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -10,4 +10,4 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-wilhelm_renderer = { path = "../.." }
+wilhelm_renderer = { path = "../../.." }

@@ -13,12 +13,12 @@ points (out of the spike's scope by design). See `docs/DESIGN_WASM.md`.
 ```bash
 # from the repo root
 cargo build -p shapes_scaled_wasm --target wasm32-unknown-unknown --release
-cp target/wasm32-unknown-unknown/release/shapes_scaled_wasm.wasm examples/shapes_scaled_wasm/web/
+cp target/wasm32-unknown-unknown/release/shapes_scaled_wasm.wasm examples/wasm/shapes_scaled/web/
 
-python3 -m http.server 8000 --directory examples/shapes_scaled_wasm/web
+python3 -m http.server 8000 --directory examples/wasm/shapes_scaled/web
 # open http://localhost:8000 and scroll on the canvas to zoom
 ```
 
-`web/glue.js` is byte-identical to `examples/shapes_wasm/web/glue.js`
+`web/glue.js` is byte-identical to `examples/wasm/shapes/web/glue.js`
 (the page selects the module via `window.WILHELM_WASM`); it should
 eventually move next to the backend in `wilhelm_renderer_sys`.

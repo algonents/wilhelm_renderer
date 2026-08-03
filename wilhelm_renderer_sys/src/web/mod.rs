@@ -2,7 +2,7 @@
 //!
 //! Provides the same `_gl*` / `_glfw*` / `_ft_*` symbols as the native
 //! C++ backend, implemented as ordinary Rust functions that forward to a
-//! small hand-written JS glue file (see `examples/shapes_wasm/web/glue.js`)
+//! small hand-written JS glue file (see `examples/wasm/shapes/web/glue.js`)
 //! through wasm imports in the `"wilhelm"` module. The upper crate compiles
 //! against the identical API on every target and cannot tell which backend
 //! is underneath.

@@ -10,4 +10,4 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-wilhelm_renderer = { path = "../.." }
+wilhelm_renderer = { path = "../../.." }
