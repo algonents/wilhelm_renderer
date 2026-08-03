@@ -16,8 +16,10 @@ Done (all on `feat/wasm_backend`, browser-verified):
 - [x] `build.rs` early-returns on wasm — no C toolchain (item 7)
 - [x] Shared JS glue consolidated as `wilhelm_renderer_sys/js/webglrenderer.js`
       (page contract: `WILHELM_WASM` + `WILHELM_ASSETS`)
-- [x] Resize + scroll input through the GLFW trampolines
-      (`wilhelm_dispatch_resize` / `wilhelm_dispatch_scroll`)
+- [x] Full input dispatch through the GLFW trampolines: resize, scroll,
+      cursor position, mouse buttons (DOM→GLFW button remap, context menu
+      suppressed), keys (`KeyboardEvent.code` → GLFW keycode table,
+      press/release/repeat, GLFW_MOD_* bitfield)
 - [x] `GL_R8` font atlas internalformat (item 4)
 - [x] MSAA via `antialias: true` context attribute on wasm (item 2)
 - [x] `image` crate default-features trimmed to PNG (item 8)
@@ -29,7 +31,7 @@ Done (all on `feat/wasm_backend`, browser-verified):
       scale-independent labels, works on wasm
 - [x] `Shader::compile` per-stage compile-status checks
 - [x] Examples: `wasm/shapes` (incl. images + text), `wasm/shapes_scaled`,
-      `wasm/bouncing_balls`, `wasm/text`, `wasm/text_sdf`
+      `wasm/bouncing_balls`, `wasm/text`, `wasm/text_sdf`, `wasm/input`
 
 Remaining for a stable backend:
 
@@ -37,7 +39,6 @@ Remaining for a stable backend:
       remove `Renderer::set_point_size` (item 1 — precursor, still pending)
 - [ ] Single-source GLSL ES 3.00 shaders; move the header rewrite from
       webglrenderer.js into the *native* backend (item 3 — currently inverted)
-- [ ] Remaining input dispatchers: cursor move, mouse buttons, keys
 - [ ] Instancing example on wasm
 - [ ] `devicePixelRatio` / content-scale handling (item 9)
 - [ ] WebGL context-loss recovery (shader singletons + atlas reset)

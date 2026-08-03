@@ -3,8 +3,9 @@
 //! A single "window" is the page's canvas element. Creation sets the canvas
 //! size and acquires the WebGL2 context; swap/poll are no-ops because the
 //! browser presents at requestAnimationFrame boundaries and pushes events.
-//! Input callbacks are stored for the glue to dispatch from DOM listeners
-//! (not wired in the spike — the shapes demo takes no input).
+//! Input callbacks are stored and dispatched from the glue's DOM listeners
+//! through the `wilhelm_dispatch_*` exports below (resize, scroll, cursor
+//! position, mouse button, key).
 
 #![allow(non_snake_case)]
 
@@ -191,5 +192,49 @@ pub extern "C" fn wilhelm_dispatch_scroll(x_offset: f64, y_offset: f64) {
     if raw != 0 {
         let f: ScrollFn = unsafe { std::mem::transmute(raw) };
         f(CANVAS_WINDOW, x_offset, y_offset);
+    }
+}
+
+/// Called by the JS glue on canvas mousemove events. Coordinates are
+/// canvas-relative CSS pixels, matching GLFW's window-content convention.
+#[no_mangle]
+pub extern "C" fn wilhelm_dispatch_cursor_pos(x: f64, y: f64) {
+    type CursorFn = extern "C" fn(*const GLFWwindow, f64, f64);
+
+    let raw = CB_CURSOR_POS.load(Ordering::Relaxed);
+    if raw != 0 {
+        let f: CursorFn = unsafe { std::mem::transmute(raw) };
+        f(CANVAS_WINDOW, x, y);
+    }
+}
+
+/// Called by the JS glue on canvas mousedown/mouseup. The glue passes
+/// GLFW conventions: button left=0 right=1 middle=2 (DOM's middle/right
+/// are swapped relative to this), action press=1 release=0, mods as the
+/// GLFW_MOD_* bitfield.
+#[no_mangle]
+pub extern "C" fn wilhelm_dispatch_mouse_button(button: i32, action: i32, mods: i32) {
+    type MouseButtonFn = extern "C" fn(*const GLFWwindow, i32, i32, i32);
+
+    let raw = CB_MOUSE_BUTTON.load(Ordering::Relaxed);
+    if raw != 0 {
+        let f: MouseButtonFn = unsafe { std::mem::transmute(raw) };
+        f(CANVAS_WINDOW, button, action, mods);
+    }
+}
+
+/// Called by the JS glue on keydown/keyup. The glue maps
+/// `KeyboardEvent.code` (physical key) to GLFW keycodes and passes action
+/// press=1 release=0 repeat=2 plus the GLFW_MOD_* bitfield. Browsers do
+/// not expose hardware scancodes; 0 is passed (GLFW documents scancodes
+/// as platform-specific, so no portable code can depend on them).
+#[no_mangle]
+pub extern "C" fn wilhelm_dispatch_key(key: i32, scancode: i32, action: i32, mods: i32) {
+    type KeyFn = extern "C" fn(*const GLFWwindow, i32, i32, i32, i32);
+
+    let raw = CB_KEY.load(Ordering::Relaxed);
+    if raw != 0 {
+        let f: KeyFn = unsafe { std::mem::transmute(raw) };
+        f(CANVAS_WINDOW, key, scancode, action, mods);
     }
 }

@@ -64,6 +64,33 @@
     return 4; // RGBA and friends
   }
 
+  // KeyboardEvent.code (physical key) -> GLFW keycode. GLFW keycodes are
+  // themselves US-layout physical names, so this is the faithful mapping.
+  // Unmapped codes are ignored. Browsers expose no hardware scancode; the
+  // dispatcher passes 0 (GLFW documents scancodes as platform-specific).
+  const GLFW_KEYS = {
+    Space: 32, Quote: 39, Comma: 44, Minus: 45, Period: 46, Slash: 47,
+    Semicolon: 59, Equal: 61,
+    BracketLeft: 91, Backslash: 92, BracketRight: 93, Backquote: 96,
+    Escape: 256, Enter: 257, Tab: 258, Backspace: 259, Insert: 260,
+    Delete: 261, ArrowRight: 262, ArrowLeft: 263, ArrowDown: 264,
+    ArrowUp: 265, PageUp: 266, PageDown: 267, Home: 268, End: 269,
+    CapsLock: 280, ScrollLock: 281, NumLock: 282, PrintScreen: 283,
+    Pause: 284,
+    NumpadDecimal: 330, NumpadDivide: 331, NumpadMultiply: 332,
+    NumpadSubtract: 333, NumpadAdd: 334, NumpadEnter: 335, NumpadEqual: 336,
+    ShiftLeft: 340, ControlLeft: 341, AltLeft: 342, MetaLeft: 343,
+    ShiftRight: 344, ControlRight: 345, AltRight: 346, MetaRight: 347,
+    ContextMenu: 348,
+  };
+  for (let i = 0; i < 26; i++) GLFW_KEYS["Key" + String.fromCharCode(65 + i)] = 65 + i;
+  for (let i = 0; i < 10; i++) { GLFW_KEYS["Digit" + i] = 48 + i; GLFW_KEYS["Numpad" + i] = 320 + i; }
+  for (let i = 1; i <= 12; i++) GLFW_KEYS["F" + i] = 289 + i; // F1 = 290
+
+  // GLFW_MOD_SHIFT | CONTROL | ALT | SUPER
+  const glfwMods = (e) =>
+    (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.altKey ? 4 : 0) | (e.metaKey ? 8 : 0);
+
   function adaptShaderSource(type, src) {
     let out = src.replace("#version 330 core", "#version 300 es");
     if (type === GL_FRAGMENT_SHADER && !out.includes("precision ")) {
@@ -265,6 +292,37 @@
         },
         { passive: false }
       );
+
+      // Mouse: canvas-relative CSS pixels. DOM numbers middle=1/right=2;
+      // GLFW numbers right=1/middle=2 — swap. Context menu is suppressed
+      // so right-click reaches the engine.
+      const DOM_TO_GLFW_BUTTON = [0, 2, 1];
+      canvas.addEventListener("mousemove", (e) =>
+        instance.exports.wilhelm_dispatch_cursor_pos?.(e.offsetX, e.offsetY)
+      );
+      canvas.addEventListener("mousedown", (e) =>
+        instance.exports.wilhelm_dispatch_mouse_button?.(
+          DOM_TO_GLFW_BUTTON[e.button] ?? e.button, 1, glfwMods(e)
+        )
+      );
+      canvas.addEventListener("mouseup", (e) =>
+        instance.exports.wilhelm_dispatch_mouse_button?.(
+          DOM_TO_GLFW_BUTTON[e.button] ?? e.button, 0, glfwMods(e)
+        )
+      );
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      // Keyboard: window-level (the canvas is not focusable). Handled keys
+      // preventDefault so Space/arrows don't scroll the page — except with
+      // Ctrl/Meta held, keeping browser shortcuts (reload, devtools) alive.
+      const onKey = (e, action) => {
+        const key = GLFW_KEYS[e.code];
+        if (key === undefined) return;
+        if (!e.ctrlKey && !e.metaKey) e.preventDefault();
+        instance.exports.wilhelm_dispatch_key?.(key, 0, action, glfwMods(e));
+      };
+      window.addEventListener("keydown", (e) => onKey(e, e.repeat ? 2 : 1));
+      window.addEventListener("keyup", (e) => onKey(e, 0));
 
       const loop = () => {
         instance.exports.wasm_frame();
