@@ -32,6 +32,8 @@ Done (all on `feat/wasm_backend`, browser-verified):
 - [x] `Shader::compile` per-stage compile-status checks
 - [x] Instancing on wasm: `wasm/bouncing_balls_instanced` — 10,000 balls,
       one instanced draw call, 60 fps in Chrome
+- [x] Single-source GLSL ES 3.00 shaders; the NATIVE backend rewrites the
+      header, the glue passes through (item 3 — inversion corrected)
 - [x] Examples: `wasm/shapes` (incl. images + text), `wasm/shapes_scaled`,
       `wasm/bouncing_balls`, `wasm/bouncing_balls_instanced`, `wasm/text`,
       `wasm/text_sdf`, `wasm/input`
@@ -40,8 +42,6 @@ Remaining for a stable backend:
 
 - [ ] GL_POINTS retirement → circle-backed Point/MultiPoint,
       remove `Renderer::set_point_size` (item 1 — precursor, still pending)
-- [ ] Single-source GLSL ES 3.00 shaders; move the header rewrite from
-      webglrenderer.js into the *native* backend (item 3 — currently inverted)
 - [ ] `devicePixelRatio` / content-scale handling (item 9)
 - [ ] WebGL context-loss recovery (shader singletons + atlas reset)
 - [ ] Drop the `glGetError` per-call check in native `_glTexImage2D` (item 9)
@@ -247,10 +247,10 @@ the attribute at context creation. Below-the-boundary divergence — fine.
 
 ### 3. Shader dialect: single-source GLSL ES 3.00 (precursor-adjacent)
 
-**PENDING — currently inverted vs this design:** sources are still
-`#version 330 core` and `webglrenderer.js` rewrites them to `300 es` (plus
-injecting a default fragment precision when absent). The decided end state
-flips this: author in `300 es`, native backend rewrites.
+**DONE (2026-08-04, on feat/wasm_backend):** all 14 shaders (10 library,
+4 example) are authored in `#version 300 es` with `precision highp float;`
+in fragments; the native `_glShaderSource` shim rewrites the header to
+`330 core`; `webglrenderer.js` passes sources through untouched.
 
 All 13 shaders are `#version 330 core` (9 in `src/graphics2d/shaders/`,
 4 in examples). Rule 2 (converge, don't branch) applied: **author shaders

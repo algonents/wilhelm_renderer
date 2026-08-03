@@ -1,4 +1,5 @@
-#version 330 core
+#version 300 es
+precision highp float;
 uniform vec4 geometryColor;
 in vec4 vInstanceColor;
 out vec4 FragColor;

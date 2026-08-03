@@ -41,7 +41,6 @@
   const objs = [null]; // shaders, programs, buffers, VAOs, textures
   const uniforms = [null]; // uniform locations
   const uniformCache = new Map(); // "program:name" -> uniforms index (or -1)
-  const shaderTypes = new Map(); // shader id -> type (for precision injection)
 
   const GL_MULTISAMPLE = 0x809d;
   const GL_FRAGMENT_SHADER = 0x8b30;
@@ -91,14 +90,6 @@
   const glfwMods = (e) =>
     (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.altKey ? 4 : 0) | (e.metaKey ? 8 : 0);
 
-  function adaptShaderSource(type, src) {
-    let out = src.replace("#version 330 core", "#version 300 es");
-    if (type === GL_FRAGMENT_SHADER && !out.includes("precision ")) {
-      out = out.replace("#version 300 es", "#version 300 es\nprecision mediump float;");
-    }
-    return out;
-  }
-
   const wilhelm = {
     // canvas / environment -------------------------------------------------
     js_setup_canvas(width, height) {
@@ -130,12 +121,13 @@
 
     // shaders / programs ---------------------------------------------------
     js_gl_create_shader(type) {
-      const id = alloc(gl.createShader(type));
-      shaderTypes.set(id, type);
-      return id;
+      return alloc(gl.createShader(type));
     },
     js_gl_shader_source(shader, ptr, len) {
-      gl.shaderSource(objs[shader], adaptShaderSource(shaderTypes.get(shader), str(ptr, len)));
+      // Shaders arrive as GLSL ES 3.00 — WebGL2's native dialect. The
+      // NATIVE backend is the one that rewrites the header (to 330 core);
+      // this backend passes sources through untouched.
+      gl.shaderSource(objs[shader], str(ptr, len));
     },
     js_gl_compile_shader(shader) {
       gl.compileShader(objs[shader]);

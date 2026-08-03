@@ -1,4 +1,4 @@
-#version 330 core
+#version 300 es
 
 uniform mat4 u_Transform;                     // projection matrix
 uniform vec2 u_screen_offset;                 // single-shape translation (uniform). Forced to 0 when instancing

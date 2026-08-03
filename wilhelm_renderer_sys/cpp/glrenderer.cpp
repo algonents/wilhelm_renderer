@@ -346,7 +346,23 @@ extern "C"
 
     void _glShaderSource(GLuint shader, GLchar *source)
     {
-        glShaderSource(shader, 1, &source, NULL);
+        // Shaders are authored once in GLSL ES 3.00 — the contract dialect
+        // (docs/DESIGN_WASM.md item 3). This backend rewrites the version
+        // header to the desktop equivalent; precision qualifiers are legal
+        // no-ops in GLSL 3.30, so the rest of the source passes unchanged.
+        static const char es_header[] = "#version 300 es";
+        static const char gl_header[] = "#version 330 core";
+        if (strncmp(source, es_header, sizeof(es_header) - 1) == 0)
+        {
+            std::string patched(gl_header);
+            patched += source + sizeof(es_header) - 1;
+            const GLchar *p = patched.c_str();
+            glShaderSource(shader, 1, &p, NULL);
+        }
+        else
+        {
+            glShaderSource(shader, 1, &source, NULL);
+        }
     }
 
     void _glCompileShader(GLuint shader)
