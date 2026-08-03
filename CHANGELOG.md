@@ -18,6 +18,19 @@
 
 ### Added
 
+- **SDF (vector-quality) text rendering** — `ShapeRenderable::text_sdf(content,
+  font_path, size, color)` renders from a signed-distance-field atlas: one
+  48px atlas stays sharp at any `set_scale`/zoom, where bitmap text blurs.
+  Pure-Rust SDF generation (outline-derived distances + scanline-winding
+  sign) in `src/core/font.rs` (`AtlasMode`, `FontAtlas::new_sdf` /
+  `from_source_sdf`); new `text_sdf.frag` fwidth/smoothstep shader; works
+  on wasm (see `examples/wasm/text_sdf`, live zoom demo). Ported from the
+  `feat/vector-fonts` prototype, whose FreeType-based generator did not
+  survive the FreeType removal. See `docs/SDF_FONTS.md`.
+- **`Shader::compile` now verifies compile status** per stage
+  (vertex/fragment/geometry) and returns `Err` naming the failed stage
+  instead of silently linking a broken program (salvaged from
+  `feat/vector-fonts`).
 - **Byte-based asset loading** (works on wasm, where there is no
   filesystem):
   - `ImageSource{Path,Bytes}` / `FontSource{Path,Bytes}` — every loader

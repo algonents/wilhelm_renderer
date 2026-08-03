@@ -240,6 +240,7 @@ fn image_shader() -> Rc<Shader> {
 
 thread_local! {
     static TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
+    static SDF_TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
 }
 fn text_shader() -> Rc<Shader> {
     TEXT_SHADER.with(|cell| {
@@ -253,9 +254,24 @@ fn text_shader() -> Rc<Shader> {
         .clone()
     })
 }
+fn sdf_text_shader() -> Rc<Shader> {
+    SDF_TEXT_SHADER.with(|cell| {
+        cell.get_or_init(|| {
+            // Same vertex shader as bitmap text; only the fragment stage
+            // interprets the atlas texel as a distance instead of coverage.
+            let vert_src = include_str!("../shaders/text.vert");
+            let frag_src = include_str!("../shaders/text_sdf.frag");
+            Rc::new(
+                Shader::compile(vert_src, frag_src, None)
+                    .expect("Failed to compile SDF text shader"),
+            )
+        })
+        .clone()
+    })
+}
 
-/// Font cache key: (font_path, font_size)
-type FontCacheKey = (String, u32);
+/// Font cache key: (font_path, font_size, is_sdf)
+type FontCacheKey = (String, u32, bool);
 
 thread_local! {
     /// Global font cache - shares FontAtlas instances across text renderables.
@@ -279,21 +295,28 @@ pub fn register_font(name: &str, bytes: Vec<u8>) {
     });
 }
 
-/// Get or create a FontAtlas from the cache
-fn get_or_create_font_atlas(font_path: &str, font_size: u32) -> Rc<RefCell<FontAtlas>> {
+/// Get or create a FontAtlas from the cache. SDF glyphs carry spread
+/// padding on every side, so SDF atlases get 1024 (48px ASCII overflows 512).
+fn get_or_create_font_atlas(font_path: &str, font_size: u32, sdf: bool) -> Rc<RefCell<FontAtlas>> {
     FONT_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
-        let key = (font_path.to_string(), font_size);
+        let key = (font_path.to_string(), font_size, sdf);
 
         if let Some(atlas) = cache.get(&key) {
             return atlas.clone();
         }
 
+        let atlas_size = if sdf { 1024 } else { 512 };
+
         // Registered name first, filesystem path second.
         let registered = FONT_REGISTRY.with(|fonts| fonts.borrow().get(font_path).cloned());
-        let atlas = match registered {
-            Some(bytes) => FontAtlas::from_source(bytes.as_slice(), font_size, 512),
-            None => FontAtlas::new(font_path, font_size, 512),
+        let atlas = match (registered, sdf) {
+            (Some(bytes), false) => FontAtlas::from_source(bytes.as_slice(), font_size, atlas_size),
+            (Some(bytes), true) => {
+                FontAtlas::from_source_sdf(bytes.as_slice(), font_size, atlas_size)
+            }
+            (None, false) => FontAtlas::new(font_path, font_size, atlas_size),
+            (None, true) => FontAtlas::new_sdf(font_path, font_size, atlas_size),
         }
         .expect("Failed to create font atlas");
 
@@ -1089,8 +1112,33 @@ impl ShapeRenderable {
     }
 
     fn text(text: Text, color: Color, anchor: Anchor) -> Self {
-        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size);
+        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size, false);
+        Self::text_with_atlas(text, color, anchor, font_atlas, text_shader())
+    }
 
+    /// Scale-independent text rendered from a signed-distance-field atlas:
+    /// stays sharp under any `set_scale` / zoom, where bitmap text blurs.
+    /// `font_path` may be a filesystem path or a name registered via
+    /// [`register_font`]. Only reachable through this constructor —
+    /// `from_shape(ShapeKind::Text)` keeps the bitmap path.
+    pub fn text_sdf(
+        content: impl Into<String>,
+        font_path: impl Into<String>,
+        font_size: u32,
+        color: Color,
+    ) -> Self {
+        let text = Text::new(content, font_path, font_size);
+        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size, true);
+        Self::text_with_atlas(text, color, Anchor::Default, font_atlas, sdf_text_shader())
+    }
+
+    fn text_with_atlas(
+        text: Text,
+        color: Color,
+        anchor: Anchor,
+        font_atlas: Rc<RefCell<FontAtlas>>,
+        shader: Rc<Shader>,
+    ) -> Self {
         // Generate raw glyph vertices and compute the bbox in one pass.
         let (mut vertices, bbox_min, bbox_max, texture_id) = {
             let mut atlas = font_atlas.borrow_mut();
@@ -1118,7 +1166,6 @@ impl ShapeRenderable {
         geometry.add_vertex_attribute(Attribute::new(0, 2, 4, 0));
         geometry.add_vertex_attribute(Attribute::new(1, 2, 4, 2));
 
-        let shader = text_shader();
         let mut mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
         mesh.color = Some(color);
 

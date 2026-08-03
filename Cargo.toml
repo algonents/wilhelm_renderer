@@ -54,6 +54,8 @@ members = [
     "examples/wasm/shapes",
     "examples/wasm/shapes_scaled",
     "examples/wasm/text",
+    "examples/wasm/text_sdf",
+    "examples/text_sdf",
     "examples/markers",
     "examples/style_mutation",
     "examples/text",
