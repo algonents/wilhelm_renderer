@@ -8,7 +8,7 @@ pub use shaperenderable::{clear_font_cache, register_font};
 
 #[derive(Clone)]
 pub enum ShapeKind {
-    Point,
+    Point(Point),
     MultiPoint(MultiPoint),
     Line(Line),
     Polyline(Polyline),
@@ -23,22 +23,32 @@ pub enum ShapeKind {
     Text(Text),
 }
 
+/// A dot with a per-shape radius, rendered as circle geometry.
+///
+/// (Formerly a GL_POINTS sprite sized by the global
+/// `Renderer::set_point_size` — retired: ES 3.0/WebGL2 only guarantee 1px
+/// points, and point sprites clip by center, vanishing whole at viewport
+/// edges. Circle geometry behaves identically on every backend.)
 #[derive(Clone)]
-pub struct Point;
-impl Point{
-    pub fn new() -> Self{
-        Self{}
+pub struct Point {
+    pub radius: f32,
+}
+impl Point {
+    pub fn new(radius: f32) -> Self {
+        Self { radius }
     }
 }
 
 #[derive(Clone)]
 pub struct MultiPoint {
     pub points: Vec<(f32, f32)>,
+    /// Radius of every dot, in logical pixels.
+    pub radius: f32,
 }
 
 impl MultiPoint {
-    pub fn new(points: Vec<(f32, f32)>) -> Self {
-        Self { points }
+    pub fn new(points: Vec<(f32, f32)>, radius: f32) -> Self {
+        Self { points, radius }
     }
 
     /// Vertex average of all points. Panics on empty input.

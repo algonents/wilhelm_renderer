@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **GL_POINTS retired; `Point`/`MultiPoint` are circle-backed with a
+  per-shape radius.** `Point::new(radius)` and
+  `MultiPoint::new(points, radius)` replace the global
+  `Renderer::set_point_size` (removed — it was hidden global draw state,
+  and ES 3.0/WebGL2 only guarantee 1px point sprites, which also clip by
+  center and pop out at viewport edges). `ShapeKind::Point` now carries
+  the `Point`. `MultiPoint` renders all dots in one batched draw call.
+  The `_glPointSize` contract symbol and `point.frag` are deleted.
+- **All shaders are authored in GLSL ES 3.00** (`#version 300 es` +
+  fragment `precision highp float;`); the native backend rewrites the
+  version header to `330 core` in `_glShaderSource`. `Shader::compile`
+  now checks per-stage compile status and returns `Err` on failure.
 - **FreeType removed; text rendering is now pure Rust.** Glyphs are parsed
   and rasterized by `ttf-parser` + `ab_glyph_rasterizer` (both
   zero-dependency crates) in `src/core/font.rs`. The bundled FreeType

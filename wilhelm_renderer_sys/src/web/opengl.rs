@@ -271,11 +271,6 @@ pub unsafe fn _glUniformMatrix4fv(
     unsafe { js_gl_uniform_matrix_4fv(location, count, as_u32(transpose), value) }
 }
 
-pub unsafe fn _glPointSize(_size: GLfloat) {
-    // Not expressible in WebGL2 (see docs/DESIGN_WASM.md item 1 — GL_POINTS
-    // is scheduled for retirement). No-op.
-}
-
 pub unsafe fn _glEnable(cap: GLenum) {
     // The glue skips GL_MULTISAMPLE (context-creation attribute in WebGL).
     unsafe { js_gl_enable(cap) }

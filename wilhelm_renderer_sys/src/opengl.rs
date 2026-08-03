@@ -179,7 +179,6 @@ unsafe extern "C" {
         transpose: GLboolean,
         value: *const GLfloat,
     );
-    pub fn _glPointSize(size: GLfloat);
     pub fn _glEnable(cap: GLenum);
     pub fn _glBlendFunc(sfactor: GLenum, dfactor: GLenum);
 }

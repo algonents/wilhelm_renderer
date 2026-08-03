@@ -475,11 +475,6 @@ extern "C"
         glUniformMatrix4fv(location, count, transpose, value);
     }
 
-    void _glPointSize(GLfloat size)
-    {
-        glPointSize(size);
-    }
-
     void _glEnable(GLenum cap)
     {
         glEnable(cap);

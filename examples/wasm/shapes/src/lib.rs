@@ -13,8 +13,8 @@ use std::cell::RefCell;
 
 use wilhelm_renderer::core::{App, Color, Window};
 use wilhelm_renderer::graphics2d::shapes::{
-    register_font, Arc, Circle, Ellipse, Line, Polygon, Polyline, Rectangle, RoundedRectangle,
-    ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle,
+    register_font, Arc, Circle, Ellipse, Line, MultiPoint, Point, Polygon, Polyline, Rectangle,
+    RoundedRectangle, ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle,
 };
 
 thread_local! {
@@ -48,6 +48,16 @@ pub extern "C" fn wasm_asset_loaded(index: usize, ptr: *mut u8, len: usize) {
         }
         assets[index] = bytes;
     });
+}
+
+fn sine_wave_local(amplitude: f32, points: usize, wavelength: f32) -> Vec<(f32, f32)> {
+    let dx = wavelength / (points - 1) as f32;
+    (0..points)
+        .map(|i| {
+            let x = i as f32 * dx;
+            (x, amplitude * (x / wavelength * std::f32::consts::TAU).sin())
+        })
+        .collect()
 }
 
 fn create_equilateral_triangle() -> [(f32, f32); 3] {
@@ -167,6 +177,18 @@ fn build_app() -> App<'static> {
                 Color::from_rgb(1.0, 1.0, 0.0),
                 3.0,
             ),
+        ),
+        // Point at (650, 260) — circle-backed dots, first time on wasm
+        shape(
+            (650.0, 260.0),
+            ShapeKind::Point(Point::new(3.0)),
+            ShapeStyle::fill(Color::from_rgb(1.0, 0.0, 0.0)),
+        ),
+        // MultiPoint (sine wave) at (500, 100)
+        shape(
+            (500.0, 100.0),
+            ShapeKind::MultiPoint(MultiPoint::new(sine_wave_local(30.0, 200, 100.0), 3.0)),
+            ShapeStyle::fill(Color::from_rgb(0.0, 0.0, 1.0)),
         ),
     ]);
 

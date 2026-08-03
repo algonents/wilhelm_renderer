@@ -82,7 +82,6 @@ extern "C"
     void _glUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
     void _glUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
     void _glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-    void _glPointSize(GLfloat size);
     void _glEnable(GLenum cap);
     void _glBlendFunc(GLenum sfactor, GLenum dfactor);
 };

@@ -1,5 +1,5 @@
 use crate::core::engine::opengl::{
-    GL_POINTS, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLES, GLfloat, Vec2,
+    GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLES, GLfloat, Vec2,
 };
 use crate::core::{
     Attribute, Color, FontAtlas, Geometry, Mesh, Renderable, Renderer, Shader,
@@ -7,8 +7,8 @@ use crate::core::{
 };
 use crate::core::image::{Image as CoreImage, ImageError, ImageSource};
 use crate::graphics2d::shapes::{
-    Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Polygon, Polyline, Rectangle,
-    RoundedRectangle, ShapeKind, Text, Triangle,
+    Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Point, Polygon, Polyline,
+    Rectangle, RoundedRectangle, ShapeKind, Text, Triangle,
 };
 use crate::core::math::Mat4;
 use std::cell::{OnceCell, RefCell};
@@ -17,6 +17,10 @@ use std::f32::consts::PI;
 use std::rc::Rc;
 
 const MIN_STROKE_WIDTH: f32 = 1.0;
+
+/// Segments per circle-backed dot (Point/MultiPoint). Dots are small;
+/// 24 segments is visually indistinguishable from the 100 used by Circle.
+const DOT_SEGMENTS: usize = 24;
 
 /// Anchor point used for positioning, rotation, and scaling.
 ///
@@ -199,23 +203,6 @@ fn dashed_shader() -> Rc<Shader> {
             Rc::new(
                 Shader::compile(vert_src, frag_src, None)
                     .expect("Failed to compile dashed shader"),
-            )
-        })
-        .clone()
-    })
-}
-
-thread_local! {
-    static POINT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
-}
-
-fn point_shader() -> Rc<Shader> {
-    POINT_SHADER.with(|cell| {
-        cell.get_or_init(|| {
-            let vert_src = include_str!("../shaders/shape.vert");
-            let frag_src = include_str!("../shaders/point.frag");
-            Rc::new(
-                Shader::compile(vert_src, frag_src, None).expect("Failed to compile point shader"),
             )
         })
         .clone()
@@ -473,8 +460,8 @@ impl ShapeRenderable {
 
     fn from_shape_with_anchor(shape: ShapeKind, style: ShapeStyle, anchor: Anchor) -> Self {
         match shape {
-            ShapeKind::Point => {
-                ShapeRenderable::point(style.fill.unwrap_or(Color::white()), anchor)
+            ShapeKind::Point(point) => {
+                ShapeRenderable::point(point, style.fill.unwrap_or(Color::white()), anchor)
             }
             ShapeKind::MultiPoint(mp) => {
                 ShapeRenderable::multi_points(mp, style.fill.unwrap_or(Color::white()), anchor)
@@ -622,12 +609,17 @@ impl ShapeRenderable {
         }
     }
 
-    fn point(color: Color, _anchor: Anchor) -> Self {
-        // Point has only one vertex at (0, 0); anchor is trivially that point
-        // for every variant (bbox is degenerate). Ignore the anchor.
-        let geometry = ShapeRenderable::point_geometry();
-        let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
-        ShapeRenderable::new(mesh, ShapeKind::Point)
+    fn point(point: Point, color: Color, anchor: Anchor) -> Self {
+        // Circle-backed dot (GL_POINTS is retired — see shapes::Point).
+        let r = point.radius;
+        let (ax, ay) = resolve_anchor(anchor, (-r, -r), (r, r), (0.0, 0.0));
+        let geometry = ShapeRenderable::circle_geometry(r, DOT_SEGMENTS, ax, ay);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Point(point));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
     fn multi_points(multi_point: MultiPoint, color: Color, anchor: Anchor) -> Self {
@@ -643,8 +635,11 @@ impl ShapeRenderable {
             .map(|(px, py)| (px - ax, py - ay))
             .collect();
 
-        let geometry = ShapeRenderable::point_list_geometry(&rel_points);
-        let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
+        // All dots batched into one triangle-list geometry: a single draw
+        // call, and u_offset positioning keeps working (unlike the
+        // instancing path, which zeroes it by contract).
+        let geometry = ShapeRenderable::dot_list_geometry(&rel_points, multi_point.radius);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::MultiPoint(multi_point));
         s.x = ax;
@@ -1242,36 +1237,29 @@ impl ShapeRenderable {
         ))
     }
 
-    fn point_geometry() -> Geometry {
-        let vertex = vec![0.0, 0.0];
-        let mut geometry = Geometry::new(GL_POINTS);
-        geometry.add_buffer(&vertex, 2);
+    /// One triangle-list geometry containing a disc per point — the whole
+    /// dot cloud renders in a single draw call.
+    fn dot_list_geometry(points: &[(GLfloat, GLfloat)], radius: f32) -> Geometry {
+        let mut vertices: Vec<GLfloat> = Vec::with_capacity(points.len() * DOT_SEGMENTS * 6);
 
-        geometry.add_vertex_attribute(Attribute::new(0, 2, 2, 0));
-
-        geometry
-    }
-
-    fn point_list_geometry(points: &[(GLfloat, GLfloat)]) -> Geometry {
-        let mut vertices = Vec::with_capacity(points.len() * 2);
-
-        for &(x, y) in points {
-            vertices.push(x);
-            vertices.push(y);
+        for &(cx, cy) in points {
+            for i in 0..DOT_SEGMENTS {
+                let t0 = (i as f32 / DOT_SEGMENTS as f32) * std::f32::consts::TAU;
+                let t1 = ((i + 1) as f32 / DOT_SEGMENTS as f32) * std::f32::consts::TAU;
+                vertices.extend_from_slice(&[
+                    cx,
+                    cy,
+                    cx + radius * t0.cos(),
+                    cy + radius * t0.sin(),
+                    cx + radius * t1.cos(),
+                    cy + radius * t1.sin(),
+                ]);
+            }
         }
 
-        let values_per_vertex = 2;
-
-        let mut geometry = Geometry::new(GL_POINTS);
-        geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0, // position
-            values_per_vertex,
-            values_per_vertex as usize,
-            0,
-        ));
-
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, 2);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, 2, 0));
         geometry
     }
 

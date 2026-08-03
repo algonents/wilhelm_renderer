@@ -34,14 +34,15 @@ Done (all on `feat/wasm_backend`, browser-verified):
       one instanced draw call, 60 fps in Chrome
 - [x] Single-source GLSL ES 3.00 shaders; the NATIVE backend rewrites the
       header, the glue passes through (item 3 — inversion corrected)
+- [x] GL_POINTS retired (item 1): circle-backed Point/MultiPoint with
+      per-shape radius; `set_point_size` / `_glPointSize` / `point.frag`
+      deleted; contract ~78 → ~77; points render on wasm
 - [x] Examples: `wasm/shapes` (incl. images + text), `wasm/shapes_scaled`,
       `wasm/bouncing_balls`, `wasm/bouncing_balls_instanced`, `wasm/text`,
       `wasm/text_sdf`, `wasm/input`
 
 Remaining for a stable backend:
 
-- [ ] GL_POINTS retirement → circle-backed Point/MultiPoint,
-      remove `Renderer::set_point_size` (item 1 — precursor, still pending)
 - [ ] `devicePixelRatio` / content-scale handling (item 9)
 - [ ] WebGL context-loss recovery (shader singletons + atlas reset)
 - [ ] Drop the `glGetError` per-call check in native `_glTexImage2D` (item 9)
@@ -206,8 +207,12 @@ Verified against source; full list, not a sample.
 
 ### 1. `glPointSize` → retire `GL_POINTS` entirely (precursor, on master)
 
-**PENDING** — `Renderer::set_point_size` and `GL_POINTS` geometry still
-exist; the wasm examples simply omit points so far.
+**DONE (2026-08-04, on feat/wasm_backend):** `Point`/`MultiPoint` carry a
+per-shape `radius` and render as circle geometry (`MultiPoint` batches all
+dots into one triangle-list draw). `Renderer::set_point_size`, the
+`_glPointSize` shim (native + web stub), `point.frag`, and all `GL_POINTS`
+usage are deleted. Contract ~78 → ~77 symbols. Points now render on wasm
+(added to `examples/wasm/shapes`).
 
 `glPointSize` does not exist in ES 3.0. Rather than porting it to a
 `gl_PointSize` uniform, **retire point sprites**: keep the `Point`/
