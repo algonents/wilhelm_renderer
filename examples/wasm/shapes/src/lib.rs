@@ -13,8 +13,8 @@ use std::cell::RefCell;
 
 use wilhelm_renderer::core::{App, Color, Window};
 use wilhelm_renderer::graphics2d::shapes::{
-    Arc, Circle, Ellipse, Line, Polygon, Polyline, Rectangle, RoundedRectangle, ShapeKind,
-    ShapeRenderable, ShapeStyle, Triangle,
+    register_font, Arc, Circle, Ellipse, Line, Polygon, Polyline, Rectangle, RoundedRectangle,
+    ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle,
 };
 
 thread_local! {
@@ -25,6 +25,7 @@ thread_local! {
 
 const ASSET_SMILEY: usize = 0;
 const ASSET_BUNNY: usize = 1;
+const ASSET_FONT: usize = 2;
 
 /// Called by the glue to reserve space for one fetched asset.
 #[no_mangle]
@@ -191,6 +192,18 @@ fn build_app() -> App<'static> {
         }
         if let Some(mut s) = image(ASSET_BUNNY) {
             s.set_position(400.0, 500.0);
+            images.push(s);
+        }
+
+        // Text: register the fetched font bytes under a name, then reference
+        // that name as the Text "font_path" — no filesystem involved.
+        if let Some(font_bytes) = assets.get(ASSET_FONT) {
+            register_font("DejaVuSans", font_bytes.clone());
+            let mut s = ShapeRenderable::from_shape(
+                ShapeKind::Text(Text::new("Hello from the browser!", "DejaVuSans", 48)),
+                ShapeStyle::fill(Color::from_rgb(1.0, 1.0, 1.0)),
+            );
+            s.set_position(750.0, 80.0);
             images.push(s);
         }
         app.add_shapes(images);

@@ -1,5 +1,37 @@
 # Changelog
 
+## [Unreleased] — feat/wasm_backend
+
+### Changed
+
+- **FreeType removed; text rendering is now pure Rust.** Glyphs are parsed
+  and rasterized by `ttf-parser` + `ab_glyph_rasterizer` (both
+  zero-dependency crates) in `src/core/font.rs`. The bundled FreeType
+  2.13.2 C sources, the `_ft_*` FFI symbols, and the FreeType build/link
+  steps are gone — the sys contract shrinks from ~87 to ~78 symbols, and
+  the same text stack runs on every backend (including wasm). Glyphs are
+  rendered unhinted; spacing now uses fractional advances (FreeType
+  truncated to whole pixels).
+- **Font atlas texture uses sized `GL_R8`** instead of unsized `GL_RED`
+  as internalformat (required by WebGL2, valid on GL 3.3).
+- `FontAtlas::new` now returns `Result<_, FontError>` (was `Result<_, String>`).
+
+### Added
+
+- **Byte-based asset loading** (works on wasm, where there is no
+  filesystem):
+  - `ImageSource{Path,Bytes}` / `FontSource{Path,Bytes}` — every loader
+    converges on bytes; `From` impls keep existing `&str` path callers
+    source-compatible and make `include_bytes!` arrays work directly.
+  - `try_load_image`, `ShapeRenderable::try_image`,
+    `ShapeRenderable::try_image_with_size` — non-panicking loaders for
+    network-fetched bytes (a panic aborts the module on wasm).
+  - `FontAtlas::from_source` for path- or byte-backed atlases.
+  - `register_font(name, bytes)` — registers font bytes under a name;
+    `Text::font_path` matching a registered name uses those bytes instead
+    of the filesystem (the wasm path; native analogue of CSS
+    `@font-face`).
+
 ## [0.12.0] - 2026-04-18
 
 ### Added

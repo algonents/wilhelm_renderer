@@ -29,6 +29,10 @@ exclude = [
 # rav1e AV1 encoder — ~130 extra lockfile packages. PNG is the only format
 # the engine and examples use (see docs/DESIGN_WASM.md item 8).
 image = { version = "0.25.6", default-features = false, features = ["png"] }
+# Pure-Rust text stack (replaces the bundled FreeType). Both crates have
+# zero required dependencies; ttf-parser is trimmed to core table parsing.
+ttf-parser = { version = "0.25", default-features = false, features = ["std"] }
+ab_glyph_rasterizer = "0.1"
 wilhelm_renderer_sys = { path = "wilhelm_renderer_sys", version = "=0.11.0" }
 
 [workspace]
@@ -49,6 +53,7 @@ members = [
     "examples/shapes_scaled",
     "examples/wasm/shapes",
     "examples/wasm/shapes_scaled",
+    "examples/wasm/text",
     "examples/markers",
     "examples/style_mutation",
     "examples/text",

@@ -12,7 +12,7 @@ pub mod engine;
 mod font;
 mod camera;
 
-pub use self::font::{FontAtlas, GlyphInfo};
+pub use self::font::{FontAtlas, FontError, FontSource, GlyphInfo};
 pub use self::geometry::Attribute;
 pub use self::geometry::Geometry;
 pub use self::engine::opengl::Vec2;

@@ -65,6 +65,8 @@ pub const GL_TRIANGLE_STRIP: u32 = 0x0005;
 pub const GL_VIEWPORT: u32 = 0x0BA2;
 pub const GL_TEXTURE_2D: u32 = 0x0DE1;
 pub const GL_RED: u32 = 0x1903;
+/// Sized single-channel internalformat — required by WebGL2, valid on GL 3.3.
+pub const GL_R8: u32 = 0x8229;
 pub const GL_CULL_FACE: u32 = 0x0B44;
 pub const GL_BLEND: u32 = 0x0BE2;
 pub const GL_SRC_ALPHA: u32 = 0x0302;

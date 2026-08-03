@@ -4,7 +4,7 @@ pub use shaperenderable::Anchor;
 pub use shaperenderable::ShapeRenderable;
 pub use shaperenderable::ShapeRenderableBuilder;
 pub use shaperenderable::ShapeStyle;
-pub use shaperenderable::clear_font_cache;
+pub use shaperenderable::{clear_font_cache, register_font};
 
 #[derive(Clone)]
 pub enum ShapeKind {

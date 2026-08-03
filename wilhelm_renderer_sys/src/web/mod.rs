@@ -1,6 +1,6 @@
 //! Browser (WebAssembly) backend.
 //!
-//! Provides the same `_gl*` / `_glfw*` / `_ft_*` symbols as the native
+//! Provides the same `_gl*` / `_glfw*` symbols as the native
 //! C++ backend, implemented as ordinary Rust functions that forward to a
 //! small hand-written JS glue file (see `wilhelm_renderer_sys/js/webglrenderer.js`)
 //! through wasm imports in the `"wilhelm"` module. The upper crate compiles
@@ -12,7 +12,6 @@
 //! module only ever sees the integers, so the contract semantics match the
 //! native backend. Id 0 maps to `null` (unbind), matching GL.
 
-pub mod freetype;
 pub mod glfw;
 pub mod opengl;
 

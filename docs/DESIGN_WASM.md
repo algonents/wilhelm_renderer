@@ -208,6 +208,8 @@ branching in the verified layer.)
 
 ### 4. Unsized `GL_RED` internalformat in the font atlas (precursor, on master)
 
+**DONE (2026-08-03, on feat/wasm_backend):** the atlas allocates with `GL_R8`.
+
 `src/core/font.rs:84-92` allocates the atlas with internalformat `GL_RED`;
 WebGL2 rejects unsized `RED` — must be **`GL_R8`** (0x8229). `GL_R8` is
 equally valid on desktop GL 3.3, so change it unconditionally (converge).
@@ -220,6 +222,17 @@ the `frame()` extraction. Note `examples/keyboard` hand-rolls its own
 blocking loop and would need rewriting onto `App`.
 
 ### 6. Path-based asset loading
+
+**DONE (2026-08-03, on feat/wasm_backend), beyond the plan below:**
+`ImageSource{Path,Bytes}` / `FontSource{Path,Bytes}` converge every loader
+on bytes; `register_font(name, bytes)` lets `Text::font_path` name
+registered bytes; `try_*` variants make load failures recoverable. Fonts
+went further than the `_ft_*`-shim plan: FreeType was deleted outright and
+glyph rasterization is pure Rust (`ttf-parser` + `ab_glyph_rasterizer`) in
+the safe crate — text now lives *above* the contract (~87 → ~78 symbols)
+and is target-independent. The page-side transport is
+`window.WILHELM_ASSETS` → `wasm_alloc` / `wasm_asset_loaded` (see
+`wilhelm_renderer_sys/js/webglrenderer.js`).
 
 - Fonts: `FT_New_Face(path)` (`glrenderer.cpp:498`, from
   `FontAtlas::new(font_path, …)`, `src/core/font.rs:59`).

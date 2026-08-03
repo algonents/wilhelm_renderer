@@ -261,6 +261,22 @@ thread_local! {
     /// Global font cache - shares FontAtlas instances across text renderables.
     /// Properly dropped when thread exits, no memory leaks.
     static FONT_CACHE: RefCell<HashMap<FontCacheKey, Rc<RefCell<FontAtlas>>>> = RefCell::new(HashMap::new());
+
+    /// Fonts registered by name (register_font). Checked before the
+    /// filesystem, so `Text::font_path` can name a registered font — the
+    /// only way to load fonts on backends without a filesystem (wasm).
+    static FONT_REGISTRY: RefCell<HashMap<String, Rc<Vec<u8>>>> = RefCell::new(HashMap::new());
+}
+
+/// Register font bytes under a name (the browser analogue of CSS
+/// `@font-face`). Any `Text` whose `font_path` equals `name` uses these
+/// bytes instead of reading the filesystem. Registering fetched or embedded
+/// bytes is the only way to load fonts on wasm; on native it simply takes
+/// precedence over a same-named path.
+pub fn register_font(name: &str, bytes: Vec<u8>) {
+    FONT_REGISTRY.with(|fonts| {
+        fonts.borrow_mut().insert(name.to_string(), Rc::new(bytes));
+    });
 }
 
 /// Get or create a FontAtlas from the cache
@@ -273,9 +289,14 @@ fn get_or_create_font_atlas(font_path: &str, font_size: u32) -> Rc<RefCell<FontA
             return atlas.clone();
         }
 
-        // Create new FontAtlas and cache it
-        let atlas = FontAtlas::new(font_path, font_size, 512)
-            .expect("Failed to create font atlas");
+        // Registered name first, filesystem path second.
+        let registered = FONT_REGISTRY.with(|fonts| fonts.borrow().get(font_path).cloned());
+        let atlas = match registered {
+            Some(bytes) => FontAtlas::from_source(bytes.as_slice(), font_size, 512),
+            None => FontAtlas::new(font_path, font_size, 512),
+        }
+        .expect("Failed to create font atlas");
+
         let atlas_rc = Rc::new(RefCell::new(atlas));
         cache.insert(key, atlas_rc.clone());
         atlas_rc
