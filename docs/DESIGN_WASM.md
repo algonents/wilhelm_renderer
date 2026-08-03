@@ -44,7 +44,8 @@ Done (all on `feat/wasm_backend`, browser-verified):
 Remaining for a stable backend:
 
 - [ ] `devicePixelRatio` / content-scale handling (item 9)
-- [ ] WebGL context-loss recovery (shader singletons + atlas reset)
+- [ ] WebGL context-loss: proper in-place recovery (crude
+      reload-on-loss guard shipped and verified; see Open questions)
 - [ ] Drop the `glGetError` per-call check in native `_glTexImage2D` (item 9)
 - [ ] Contract specification document + per-backend conformance suite
 - [ ] `examples/keyboard` still hand-rolls a blocking loop (item 5 note)
@@ -399,10 +400,14 @@ Original plan, for the record:
 
 Still open:
 
-- **WebGL context loss**: shader singletons and the font atlas hold GL
-  object IDs in `thread_local` `OnceCell`s with no reset path.
-  Lost-context recovery needs `clear_font_cache()` plus a shader-cache
-  reset that doesn't exist today. Real for production.
+- **WebGL context loss** (OPEN — crude guard shipped 2026-08-04):
+  `webglrenderer.js` reloads the page on `webglcontextlost`, converting
+  "black canvas forever" into a one-second blip at the cost of transient
+  app state (zoom level etc.). Verified via `WEBGL_lose_context`. Proper
+  in-place recovery remains open: shader singletons and font atlases hold
+  GL object IDs in `thread_local` `OnceCell`s with no reset path — needs
+  resettable shader/font caches plus an app rebuild against the restored
+  context (asset bytes are already retained by the wasm asset protocol).
 - **Contract specification**: where the (now ~78) symbol semantics get
   written down (a `docs/BACKEND_CONTRACT.md`?), and what the conformance
   suite runs on for the browser target (headless Chrome?).

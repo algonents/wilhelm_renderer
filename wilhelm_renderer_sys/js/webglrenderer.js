@@ -38,6 +38,15 @@
   let gl = null;
   let memory = null;
 
+  // Context-loss recovery, crude v1 (design issue OPEN — see
+  // docs/DESIGN_WASM.md "Open questions"): on loss every GL resource is
+  // dead and the engine has no rebuild path yet (shader singletons /
+  // font atlases hold dead ids), so reload the page. Converts "black
+  // canvas forever" into a one-second blip at the cost of transient app
+  // state. Proper recovery = resettable shader/font caches + app rebuild
+  // against the restored context.
+  canvas.addEventListener("webglcontextlost", () => location.reload());
+
   const objs = [null]; // shaders, programs, buffers, VAOs, textures
   const uniforms = [null]; // uniform locations
   const uniformCache = new Map(); // "program:name" -> uniforms index (or -1)
