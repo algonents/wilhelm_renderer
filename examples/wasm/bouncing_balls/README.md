@@ -14,11 +14,11 @@ See `docs/DESIGN_WASM.md`.
 ```bash
 # from the repo root
 cargo build -p bouncing_balls_wasm --target wasm32-unknown-unknown --release
-cp target/wasm32-unknown-unknown/release/bouncing_balls_wasm.wasm examples/wasm/bouncing_balls/web/
 
-python3 -m http.server 8000 --directory examples/wasm/bouncing_balls/web
-# open http://localhost:8000
+python3 -m http.server 8000   # serve the repo root — no copy step
+# open http://localhost:8000/examples/wasm/bouncing_balls/web/
 ```
 
-`web/glue.js` is byte-identical to the other wasm examples' glue
-(the page selects the module via `window.WILHELM_WASM`).
+The JS half of the backend is shared by all wasm examples:
+`wilhelm_renderer_sys/js/webglrenderer.js` (the page selects the module
+via `window.WILHELM_WASM`).

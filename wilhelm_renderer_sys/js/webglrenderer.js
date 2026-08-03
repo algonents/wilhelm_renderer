@@ -1,10 +1,21 @@
-// Hand-written JS glue for the wilhelm_renderer browser backend.
+// webglrenderer.js — the JS half of the wilhelm_renderer browser backend,
+// the WebGL2 counterpart of cpp/glrenderer.cpp. Hand-written, no
+// wasm-bindgen/Emscripten output.
 //
 // Supplies the "wilhelm" wasm import module consumed by
 // wilhelm_renderer_sys/src/web/. Owns the WebGL2 context and the
 // integer-id -> GL-object handle tables (the C-shaped contract names GL
 // objects with integers; WebGL uses opaque objects). Id 0 maps to null,
 // matching GL unbind semantics.
+//
+// Page contract (see examples/wasm/*/web/index.html):
+//   <canvas id="wilhelm-canvas">           the render target
+//   window.WILHELM_WASM   (required)       URL of the wasm module
+//   window.WILHELM_ASSETS (optional)       URLs fetched before wasm_init;
+//                                          each is copied into wasm memory
+//                                          via the module's wasm_alloc and
+//                                          handed to wasm_asset_loaded(i,
+//                                          ptr, len)
 //
 // Shader dialect: sources arrive as the crate's #version 330 core GLSL;
 // this backend rewrites the header to #version 300 es and injects a
@@ -206,17 +217,36 @@
       gl.uniformMatrix4fv(uniforms[l], !!transpose, f32(ptr, 16 * count)),
   };
 
-  // Module name comes from the page (window.WILHELM_WASM) so this glue
-  // file is identical across examples.
-  const wasmFile = window.WILHELM_WASM || "shapes_wasm.wasm";
+  // Module URL comes from the page so this file is shared by every app.
+  const wasmFile = window.WILHELM_WASM;
+  if (!wasmFile) throw new Error("window.WILHELM_WASM not set (URL of the wasm module)");
   fetch(wasmFile)
     .then((r) => {
       if (!r.ok) throw new Error("failed to fetch " + wasmFile + " (" + r.status + ")");
       return r.arrayBuffer();
     })
     .then((buf) => WebAssembly.instantiate(buf, { wilhelm }))
-    .then(({ instance }) => {
+    .then(async ({ instance }) => {
       memory = instance.exports.memory;
+
+      // Network assets: the page lists URLs in window.WILHELM_ASSETS.
+      // Each is fetched, copied into wasm memory (via the module's
+      // wasm_alloc export), and handed over as (index, ptr, len) before
+      // wasm_init runs — so the scene can be built synchronously from
+      // bytes that arrived over the network.
+      const assets = window.WILHELM_ASSETS || [];
+      await Promise.all(
+        assets.map(async (url, i) => {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error("failed to fetch " + url + " (" + r.status + ")");
+          const bytes = new Uint8Array(await r.arrayBuffer());
+          const ptr = instance.exports.wasm_alloc(bytes.length);
+          // Re-read memory.buffer after wasm_alloc: growth detaches views.
+          new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);
+          instance.exports.wasm_asset_loaded(i, ptr, bytes.length);
+        })
+      );
+
       instance.exports.wasm_init();
 
       window.addEventListener("resize", () => {

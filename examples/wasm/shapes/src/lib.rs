@@ -1,5 +1,9 @@
-//! Browser port of the `shapes` example: pure geometry (no text, images,
-//! or points — see docs/DESIGN_WASM.md, spike plan).
+//! Browser port of the `shapes` example: geometry and images (no text or
+//! points — see docs/DESIGN_WASM.md, spike plan). Images arrive over the
+//! network: the page's glue fetches the URLs listed in
+//! `window.WILHELM_ASSETS`, copies each response into wasm memory via
+//! `wasm_alloc`, and hands it to `wasm_asset_loaded` before calling
+//! `wasm_init` — where the scene is built from `ImageSource::Bytes`.
 //!
 //! The page's JS glue instantiates the wasm module, calls `wasm_init` once,
 //! then calls `wasm_frame` from every requestAnimationFrame tick. Scene and
@@ -15,6 +19,34 @@ use wilhelm_renderer::graphics2d::shapes::{
 
 thread_local! {
     static APP: RefCell<Option<App<'static>>> = RefCell::new(None);
+    /// Bytes fetched by the page, indexed by position in window.WILHELM_ASSETS.
+    static ASSETS: RefCell<Vec<Vec<u8>>> = RefCell::new(Vec::new());
+}
+
+const ASSET_SMILEY: usize = 0;
+const ASSET_BUNNY: usize = 1;
+
+/// Called by the glue to reserve space for one fetched asset.
+#[no_mangle]
+pub extern "C" fn wasm_alloc(len: usize) -> *mut u8 {
+    let mut buf = vec![0u8; len];
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+/// Called by the glue once it has copied a fetched asset into the buffer
+/// returned by `wasm_alloc`.
+#[no_mangle]
+pub extern "C" fn wasm_asset_loaded(index: usize, ptr: *mut u8, len: usize) {
+    let bytes = unsafe { Vec::from_raw_parts(ptr, len, len) };
+    ASSETS.with(|assets| {
+        let mut assets = assets.borrow_mut();
+        if assets.len() <= index {
+            assets.resize(index + 1, Vec::new());
+        }
+        assets[index] = bytes;
+    });
 }
 
 fn create_equilateral_triangle() -> [(f32, f32); 3] {
@@ -136,6 +168,33 @@ fn build_app() -> App<'static> {
             ),
         ),
     ]);
+
+    // Images (network bytes, same positions as the native example). The
+    // bytes came over the wire, so decode failures are handled instead of
+    // panicking — on wasm a panic aborts the whole module.
+    ASSETS.with(|assets| {
+        let assets = assets.borrow();
+
+        let image_sized = |idx: usize, w: f32, h: f32| -> Option<ShapeRenderable> {
+            let bytes = assets.get(idx)?;
+            ShapeRenderable::try_image_with_size(bytes.as_slice(), w, h).ok()
+        };
+        let image = |idx: usize| -> Option<ShapeRenderable> {
+            let bytes = assets.get(idx)?;
+            ShapeRenderable::try_image(bytes.as_slice()).ok()
+        };
+
+        let mut images = Vec::new();
+        if let Some(mut s) = image_sized(ASSET_SMILEY, 40.0, 40.0) {
+            s.set_position(200.0, 540.0);
+            images.push(s);
+        }
+        if let Some(mut s) = image(ASSET_BUNNY) {
+            s.set_position(400.0, 500.0);
+            images.push(s);
+        }
+        app.add_shapes(images);
+    });
 
     app
 }

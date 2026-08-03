@@ -3,8 +3,9 @@ use crate::core::engine::opengl::{
 };
 use crate::core::{
     Attribute, Color, FontAtlas, Geometry, Mesh, Renderable, Renderer, Shader,
-    generate_texture_from_image, load_image,
+    generate_texture_from_image, load_image, try_load_image,
 };
+use crate::core::image::{Image as CoreImage, ImageError, ImageSource};
 use crate::graphics2d::shapes::{
     Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Polygon, Polyline, Rectangle,
     RoundedRectangle, ShapeKind, Text, Triangle,
@@ -1106,18 +1107,38 @@ impl ShapeRenderable {
         s
     }
 
-    pub fn image_with_size(path: &str, width: f32, height: f32) -> ShapeRenderable {
-        Self::image_with_size_and_anchor(path, width, height, Anchor::Default)
+    pub fn image_with_size<'a>(
+        source: impl Into<ImageSource<'a>>,
+        width: f32,
+        height: f32,
+    ) -> ShapeRenderable {
+        Self::image_with_size_and_anchor(&load_image(source), width, height, Anchor::Default)
+    }
+
+    /// Non-panicking twin of [`Self::image_with_size`]. On wasm a panic
+    /// aborts the whole module, so callers feeding fetched bytes should
+    /// prefer this.
+    pub fn try_image_with_size<'a>(
+        source: impl Into<ImageSource<'a>>,
+        width: f32,
+        height: f32,
+    ) -> Result<ShapeRenderable, ImageError> {
+        let image = try_load_image(source)?;
+        Ok(Self::image_with_size_and_anchor(
+            &image,
+            width,
+            height,
+            Anchor::Default,
+        ))
     }
 
     fn image_with_size_and_anchor(
-        path: &str,
+        image: &CoreImage,
         width: f32,
         height: f32,
         anchor: Anchor,
     ) -> ShapeRenderable {
-        let image = load_image(path);
-        let texture_id = generate_texture_from_image(&image);
+        let texture_id = generate_texture_from_image(image);
 
         // Image geometry is built centered on origin, so bbox = (-w/2..w/2, -h/2..h/2)
         let hw = width * 0.5;
@@ -1135,9 +1156,22 @@ impl ShapeRenderable {
         s
     }
 
-    pub fn image(path: &str) -> Self {
-        let image = load_image(path);
-        Self::image_with_size(path, image.width as f32, image.height as f32)
+    pub fn image<'a>(source: impl Into<ImageSource<'a>>) -> Self {
+        let image = load_image(source);
+        let (width, height) = (image.width as f32, image.height as f32);
+        Self::image_with_size_and_anchor(&image, width, height, Anchor::Default)
+    }
+
+    /// Non-panicking twin of [`Self::image`]; see [`Self::try_image_with_size`].
+    pub fn try_image<'a>(source: impl Into<ImageSource<'a>>) -> Result<Self, ImageError> {
+        let image = try_load_image(source)?;
+        let (width, height) = (image.width as f32, image.height as f32);
+        Ok(Self::image_with_size_and_anchor(
+            &image,
+            width,
+            height,
+            Anchor::Default,
+        ))
     }
 
     fn point_geometry() -> Geometry {

@@ -10,7 +10,13 @@
 </head>
 <body>
   <canvas id="wilhelm-canvas"></canvas>
-  <script>window.WILHELM_WASM = "shapes_scaled_wasm.wasm";</script>
-  <script src="glue.js"></script>
+  <!-- Serve the REPO ROOT (python3 -m http.server 8000) and open
+       /examples/wasm/shapes_scaled/web/ — the module loads straight from
+       target/, no copy step. -->
+  <script>
+    window.WILHELM_WASM =
+      "../../../../target/wasm32-unknown-unknown/release/shapes_scaled_wasm.wasm";
+  </script>
+  <script src="../../../../wilhelm_renderer_sys/js/webglrenderer.js"></script>
 </body>
 </html>

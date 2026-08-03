@@ -10,6 +10,18 @@
 </head>
 <body>
   <canvas id="wilhelm-canvas"></canvas>
-  <script src="glue.js"></script>
+  <!-- Serve the REPO ROOT (python3 -m http.server 8000) and open
+       /examples/wasm/shapes/web/ — the module loads straight from
+       target/, no copy step. Assets are fetched over the network before
+       wasm_init; order defines the index passed to wasm_asset_loaded. -->
+  <script>
+    window.WILHELM_WASM =
+      "../../../../target/wasm32-unknown-unknown/release/shapes_wasm.wasm";
+    window.WILHELM_ASSETS = [
+      "../../../../images/smiley.png",
+      "../../../../images/bunny.png",
+    ];
+  </script>
+  <script src="../../../../wilhelm_renderer_sys/js/webglrenderer.js"></script>
 </body>
 </html>
