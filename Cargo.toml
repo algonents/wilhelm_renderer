@@ -45,6 +45,7 @@ members = [
     "examples/bouncing_balls",
     "examples/bouncing_balls_instanced",
     "examples/wasm/bouncing_balls",
+    "examples/wasm/bouncing_balls_instanced",
     "examples/wasm/input",
     "examples/instancing",
     "examples/polygons",
