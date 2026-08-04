@@ -1,10 +1,54 @@
 # WebAssembly Backend — Design
 
-Status: **direction decided, implementation not scheduled** (2026-08-02).
-Assessed on `feat/wasm` with no engine code changes. Decision: **one Rust
-client API, multiple backends behind a frozen FFI contract**, with the
-browser (WebGL2) as the second backend, implemented in pure Rust on
-`wasm32-unknown-unknown`.
+Status: **implementation well underway on `feat/wasm_backend`**
+(last updated 2026-08-04; originally assessed 2026-08-02 on `feat/wasm`).
+Decision: **one Rust client API, multiple backends behind a frozen FFI
+contract**, with the browser (WebGL2) as the second backend, implemented
+in pure Rust on `wasm32-unknown-unknown`.
+
+## Status at a glance
+
+Done (all on `feat/wasm_backend`, browser-verified):
+
+- [x] Spike succeeded: shapes render in Chrome via the pure-Rust backend
+      (`wilhelm_renderer_sys/src/web/`, contract symbols over ~50 JS imports)
+- [x] `App::frame()` extraction; rAF-driven main loop (item 5)
+- [x] `build.rs` early-returns on wasm — no C toolchain (item 7)
+- [x] Shared JS glue consolidated as `wilhelm_renderer_sys/js/webglrenderer.js`
+      (page contract: `WILHELM_WASM` + `WILHELM_ASSETS`)
+- [x] Full input dispatch through the GLFW trampolines: resize, scroll,
+      cursor position, mouse buttons (DOM→GLFW button remap, context menu
+      suppressed), keys (`KeyboardEvent.code` → GLFW keycode table,
+      press/release/repeat, GLFW_MOD_* bitfield)
+- [x] `GL_R8` font atlas internalformat (item 4)
+- [x] MSAA via `antialias: true` context attribute on wasm (item 2)
+- [x] `image` crate default-features trimmed to PNG (item 8)
+- [x] Byte-based assets: `ImageSource`/`FontSource`, `try_*` loaders,
+      `register_font`, network fetch protocol (item 6)
+- [x] **FreeType deleted** — text is pure Rust (`ttf-parser` +
+      `ab_glyph_rasterizer`) above the contract; ~87 → ~78 symbols
+- [x] SDF text (`text_sdf()`, pure-Rust generator, `docs/SDF_FONTS.md`) —
+      scale-independent labels, works on wasm
+- [x] `Shader::compile` per-stage compile-status checks
+- [x] Instancing on wasm: `wasm/bouncing_balls_instanced` — 10,000 balls,
+      one instanced draw call, 60 fps in Chrome
+- [x] Single-source GLSL ES 3.00 shaders; the NATIVE backend rewrites the
+      header, the glue passes through (item 3 — inversion corrected)
+- [x] GL_POINTS retired (item 1): circle-backed Point/MultiPoint with
+      per-shape radius; `set_point_size` / `_glPointSize` / `point.frag`
+      deleted; contract ~78 → ~77; points render on wasm
+- [x] Examples: `wasm/shapes` (incl. images + text), `wasm/shapes_scaled`,
+      `wasm/bouncing_balls`, `wasm/bouncing_balls_instanced`, `wasm/text`,
+      `wasm/text_sdf`, `wasm/input`
+
+Remaining for a stable backend:
+
+- [ ] `devicePixelRatio` / content-scale handling (item 9)
+- [ ] WebGL context-loss: proper in-place recovery (crude
+      reload-on-loss guard shipped and verified; see Open questions)
+- [ ] Drop the `glGetError` per-call check in native `_glTexImage2D` (item 9)
+- [ ] Contract specification document + per-backend conformance suite
+- [ ] `examples/keyboard` still hand-rolls a blocking loop (item 5 note)
 
 **Emscripten was considered and rejected for certification reasons.** It
 would compile the bundled C++/GLFW/FreeType stack to WASM behind a
@@ -33,7 +77,8 @@ layer contains zero `std::fs`, zero threads, zero `std::time`; shaders are
 `include_str!`-embedded; the GL surface is almost entirely ES 3.0-clean;
 and the FFI boundary is ~87 underscore-prefixed shim symbols with no
 GL/GLFW/FreeType type leakage — i.e. the "backend contract" already exists,
-it just isn't documented as one.
+it just isn't documented as one. (Since the FreeType removal the contract
+is ~78 symbols: the 9 `_ft_*` entries are gone, text lives above it.)
 
 Decisions:
 
@@ -163,6 +208,13 @@ Verified against source; full list, not a sample.
 
 ### 1. `glPointSize` → retire `GL_POINTS` entirely (precursor, on master)
 
+**DONE (2026-08-04, on feat/wasm_backend):** `Point`/`MultiPoint` carry a
+per-shape `radius` and render as circle geometry (`MultiPoint` batches all
+dots into one triangle-list draw). `Renderer::set_point_size`, the
+`_glPointSize` shim (native + web stub), `point.frag`, and all `GL_POINTS`
+usage are deleted. Contract ~78 → ~77 symbols. Points now render on wasm
+(added to `examples/wasm/shapes`).
+
 `glPointSize` does not exist in ES 3.0. Rather than porting it to a
 `gl_PointSize` uniform, **retire point sprites**: keep the `Point`/
 `MultiPoint` shape API but back it with (instanced) circle geometry.
@@ -191,11 +243,20 @@ Contract shrinks by one symbol.
 
 ### 2. `glEnable(GL_MULTISAMPLE)` — invalid enum in ES 3.0
 
+**DONE (by construction):** `webglrenderer.js` requests
+`getContext("webgl2", { antialias: true })`; the native enable never runs
+on wasm (it lives in the C++ window setup).
+
 `glrenderer.cpp:50`. In WebGL2, MSAA is a context-creation attribute
 (`antialias: true`). Native backend keeps the enable; wasm backend requests
 the attribute at context creation. Below-the-boundary divergence — fine.
 
 ### 3. Shader dialect: single-source GLSL ES 3.00 (precursor-adjacent)
+
+**DONE (2026-08-04, on feat/wasm_backend):** all 14 shaders (10 library,
+4 example) are authored in `#version 300 es` with `precision highp float;`
+in fragments; the native `_glShaderSource` shim rewrites the header to
+`330 core`; `webglrenderer.js` passes sources through untouched.
 
 All 13 shaders are `#version 330 core` (9 in `src/graphics2d/shaders/`,
 4 in examples). Rule 2 (converge, don't branch) applied: **author shaders
@@ -208,6 +269,8 @@ branching in the verified layer.)
 
 ### 4. Unsized `GL_RED` internalformat in the font atlas (precursor, on master)
 
+**DONE (2026-08-03, on feat/wasm_backend):** the atlas allocates with `GL_R8`.
+
 `src/core/font.rs:84-92` allocates the atlas with internalformat `GL_RED`;
 WebGL2 rejects unsized `RED` — must be **`GL_R8`** (0x8229). `GL_R8` is
 equally valid on desktop GL 3.3, so change it unconditionally (converge).
@@ -215,11 +278,25 @@ The `glTexSubImage2D` upload path (`GL_RED` as *format*) is already correct.
 
 ### 5. Blocking main loop
 
+**DONE:** `App::frame()` extracted; wasm entry points drive it from
+`requestAnimationFrame`. Still open: `examples/keyboard` hand-rolls its
+own blocking loop and would need rewriting onto `App`.
+
 `src/core/app.rs:142-176` — see "How the backend is implemented" above for
-the `frame()` extraction. Note `examples/keyboard` hand-rolls its own
-blocking loop and would need rewriting onto `App`.
+the `frame()` extraction.
 
 ### 6. Path-based asset loading
+
+**DONE (2026-08-03, on feat/wasm_backend), beyond the plan below:**
+`ImageSource{Path,Bytes}` / `FontSource{Path,Bytes}` converge every loader
+on bytes; `register_font(name, bytes)` lets `Text::font_path` name
+registered bytes; `try_*` variants make load failures recoverable. Fonts
+went further than the `_ft_*`-shim plan: FreeType was deleted outright and
+glyph rasterization is pure Rust (`ttf-parser` + `ab_glyph_rasterizer`) in
+the safe crate — text now lives *above* the contract (~87 → ~78 symbols)
+and is target-independent. The page-side transport is
+`window.WILHELM_ASSETS` → `wasm_alloc` / `wasm_asset_loaded` (see
+`wilhelm_renderer_sys/js/webglrenderer.js`).
 
 - Fonts: `FT_New_Face(path)` (`glrenderer.cpp:498`, from
   `FontAtlas::new(font_path, …)`, `src/core/font.rs:59`).
@@ -239,11 +316,17 @@ module; these want to become recoverable.
 
 ### 7. Build system
 
+**DONE:** `build.rs` early-returns on wasm targets — no CMake, no C
+toolchain required.
+
 `wilhelm_renderer_sys/build.rs` dispatches on linux/apple/windows only.
 The wasm branch is trivial: **skip CMake entirely** (no C is built), same
 pattern as the `DOCS_RS` early-return (`build.rs:8-11`).
 
 ### 8. `image` crate default features (precursor, on master)
+
+**DONE (on feat/wasm_backend):** `default-features = false, features =
+["png"]`. Semver note for release: native loses non-PNG decoding.
 
 `image = "0.25.6"` with defaults drags in **133 lockfile packages**,
 including `rayon` (broken on `wasm32-unknown-unknown` without threads) and
@@ -285,11 +368,19 @@ affects it on desktop. On the web there is no equivalent and none is
 needed: **browser UI is handled by the web layer** — HTML/DOM around the
 canvas — not by porting an immediate-mode C++ UI into the wasm module.
 
-## Proof-of-concept spike plan (not executed)
+## Proof-of-concept spike plan (EXECUTED — succeeded, then surpassed)
 
-Goal: `examples/shapes` minus text/images — pure geometry — rendering in a
-browser canvas, visually equivalent to native in Chrome/Firefox/Safari.
-A vertical slice of the real backend, not a throwaway.
+The spike (steps 2–6 below) succeeded on 2026-08-02: shapes rendered in
+Chrome, 136 KB module, zero console errors, no upper-crate `cfg`s other
+than the entry point. The branch has since gone well past the spike goal:
+interaction (scroll-zoom), animation (bouncing balls), live resize,
+network-loaded images, text (pure-Rust rasterizer — FreeType deleted
+rather than shimmed, superseding step 6's `_ft_*` plan), and SDF text.
+Of the step-1 precursors, `GL_R8` and `image` default-features are done
+(landed on the branch, not master); GL_POINTS retirement and the shader
+dialect flip remain.
+
+Original plan, for the record:
 
 1. Land the precursors on master: GL_POINTS retirement (item 1), `GL_R8`
    (item 4), `image` default-features (item 8), shader dialect flip
@@ -305,24 +396,31 @@ A vertical slice of the real backend, not a throwaway.
    (remaining shapes, instancing, then text via the `_ft_*`-over-Rust-
    rasterizer decision).
 
-Success criterion: same scene, no upper-crate `cfg`s other than the entry
-point.
-
 ## Open questions
 
-- **WebGL context loss**: shader singletons and the font atlas hold GL
-  object IDs in `thread_local` `OnceCell`s with no reset path
-  (`shaperenderable.rs:171-262`). Lost-context recovery needs
-  `clear_font_cache()` plus a shader-cache reset that doesn't exist today.
-  Ignorable for the spike; real for production.
-- **Async assets vs sync constructors**: `FontAtlas::new`/`Text::new` are
-  synchronous; browser fetches are async. Real API: fetch bytes first,
-  then construct (`from_bytes`).
-- **Text backend for wasm**: `ab_glyph` vs `fontdue` vs deferring text —
-  weigh rasterization fidelity vs the minimal-deps policy; FreeType
-  stays authoritative on native either way.
-- **Contract specification**: where the 87-symbol semantics get written
-  down (a `docs/BACKEND_CONTRACT.md`?), and what the conformance suite
-  runs on for the browser target (headless Chrome?).
+Still open:
+
+- **WebGL context loss** (OPEN — crude guard shipped 2026-08-04):
+  `webglrenderer.js` reloads the page on `webglcontextlost`, converting
+  "black canvas forever" into a one-second blip at the cost of transient
+  app state (zoom level etc.). Verified via `WEBGL_lose_context`. Proper
+  in-place recovery remains open: shader singletons and font atlases hold
+  GL object IDs in `thread_local` `OnceCell`s with no reset path — needs
+  resettable shader/font caches plus an app rebuild against the restored
+  context (asset bytes are already retained by the wasm asset protocol).
+- **Contract specification**: where the (now ~78) symbol semantics get
+  written down (a `docs/BACKEND_CONTRACT.md`?), and what the conformance
+  suite runs on for the browser target (headless Chrome?).
 - **WebGPU**: parked; revisit only as a deliberate contract-v2 decision
   if a hard requirement appears.
+
+Resolved since first writing:
+
+- ~~**Async assets vs sync constructors**~~ — resolved: the page fetches
+  before `wasm_init` (`WILHELM_ASSETS` → `wasm_alloc`/`wasm_asset_loaded`),
+  so construction stays synchronous; truly late-arriving assets can use
+  the same protocol post-init.
+- ~~**Text backend for wasm**~~ — resolved beyond the question's framing:
+  `ttf-parser` + `ab_glyph_rasterizer` on *every* backend; FreeType is
+  deleted, not merely non-authoritative on wasm. Text (bitmap and SDF)
+  lives above the contract.

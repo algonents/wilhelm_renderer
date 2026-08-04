@@ -11,7 +11,7 @@ wilhelm-renderer is a GPU-accelerated 2D display engine for real-time operationa
 The project is split into two published crates (the openssl/openssl-sys convention):
 
 - **`wilhelm_renderer`** (repo root) — the safe Rust API. Contains no C/C++ source and no `build.rs`. Depends on the sys crate via an exact version pin (`version = "=0.10.1"`).
-- **`wilhelm_renderer_sys`** (`wilhelm_renderer_sys/`) — raw `extern "C"` bindings plus the bundled GLFW 3.4 / FreeType 2.13.2 C/C++ sources and the CMake `build.rs`. Exposes no safe API.
+- **`wilhelm_renderer_sys`** (`wilhelm_renderer_sys/`) — raw `extern "C"` bindings plus the bundled GLFW 3.4 C/C++ sources and the CMake `build.rs`. Exposes no safe API.
 
 A Cargo `[workspace]` at the root ties both crates and all examples together (`cargo build --workspace`). The layout is asymmetric: the upper crate lives at the repo root and the sys crate sits in a subdirectory — there is no virtual workspace manifest.
 
@@ -39,32 +39,28 @@ cd examples/shapes && cargo run
 ### C++ FFI Build
 
 All native build logic lives in the **sys crate**. `wilhelm_renderer_sys/build.rs` uses CMake to compile the C++ layer (`wilhelm_renderer_sys/cpp/`). Platform-specific linking:
-- Linux: Statically links glrenderer, glfw3, freetype; dynamically links GL and stdc++
-- macOS: Statically links glrenderer, glfw3, freetype; links Cocoa, CoreFoundation, IOKit, CoreVideo frameworks and c++
-- Windows: Statically links glrenderer, glfw3, freetype; links opengl32, gdi32, user32, shell32, kernel32
+- Linux: Statically links glrenderer, glfw3; dynamically links GL and stdc++
+- macOS: Statically links glrenderer, glfw3; links Cocoa, CoreFoundation, IOKit, CoreVideo frameworks and c++
+- Windows: Statically links glrenderer, glfw3; links opengl32, gdi32, user32, shell32, kernel32
 
 Notes:
-- FreeType static lib uses a `d` suffix in debug builds (`freetyped` vs `freetype`).
 - The `Cargo.toml` `links = "wilhelm_renderer"` key plus `cargo:include=...` in `build.rs` publish the bundled GLFW include path downstream as `DEP_WILHELM_RENDERER_INCLUDE`, so direct dependents (e.g. `wilhelm_renderer_imgui`) compile against the exact same GLFW headers.
 - `build.rs` skips the native build entirely when `DOCS_RS` is set (docs.rs generation).
 
 ### Bundled Dependencies
 
-Both are bundled inside the sys crate under `wilhelm_renderer_sys/cpp/`.
-
-**FreeType 2.13.2** (`wilhelm_renderer_sys/cpp/freetype-2.13.2/`, text rendering):
-- Minimal build: Only TrueType/OpenType support with gzip for WOFF web fonts
-- Removed modules: bdf, bzip2, cache, cid, dlg, gxvalid, lzw, otvalid, pcf, pfr, sdf, svg, tools, type1, type42, winfonts
-- Config files modified: `CMakeLists.txt` (source list), `include/freetype/config/ftmodule.h` (module registration), both relative to the FreeType directory
-
 **GLFW 3.4** (`wilhelm_renderer_sys/cpp/glfw-3.4/`, window management):
 - Bundled in full, built via CMake
+
+Text rendering is pure Rust (no bundled C): `ttf-parser` + `ab_glyph_rasterizer`
+(both zero-dependency crates) in `src/core/font.rs`, above the sys contract —
+the same glyph rasterization runs on every backend, including wasm.
 
 ## Implementation Patterns
 
 These patterns are specific to working in this codebase:
 
-- **FFI Wrapper Pattern**: The raw `extern "C"` declarations live in `wilhelm_renderer_sys` (`opengl`, `glfw`, `freetype` modules). The safe wrappers in `src/core/engine/` import them privately via a `use wilhelm_renderer_sys::<mod> as sys;` alias and call through `sys::`. The raw functions are **not** re-exported — only public types and constants are surfaced via explicit `pub use`. When adding a new FFI function: declare it `pub` in the sys crate, then add a safe wrapper in the matching engine module calling through the `sys::` alias; do NOT add the raw function to the `pub use` list.
+- **FFI Wrapper Pattern**: The raw `extern "C"` declarations live in `wilhelm_renderer_sys` (`opengl`, `glfw` modules). The safe wrappers in `src/core/engine/` import them privately via a `use wilhelm_renderer_sys::<mod> as sys;` alias and call through `sys::`. The raw functions are **not** re-exported — only public types and constants are surfaced via explicit `pub use`. When adding a new FFI function: declare it `pub` in the sys crate, then add a safe wrapper in the matching engine module calling through the `sys::` alias; do NOT add the raw function to the `pub use` list.
 - **Interior Mutability**: Window uses `Rc<Cell<>>` for shared state across callbacks
 - **Component-Based Meshes**: Mesh = Geometry + Shader + Transform
 - **Callback-Driven App Loop**: App uses closures for render logic
@@ -94,11 +90,12 @@ The high-level `ShapeRenderable` API uses 1 draw call per shape, which becomes a
 ## Key Files
 
 - `src/lib.rs`: Library root, exports `core` and `graphics2d` modules
-- `src/core/engine/`: Safe FFI wrappers (`opengl.rs`, `glfw.rs`, `freetype.rs`) over the sys crate
+- `src/core/engine/`: Safe FFI wrappers (`opengl.rs`, `glfw.rs`) over the sys crate
+- `src/core/font.rs`: Pure-Rust glyph rasterization + font atlas (`ttf-parser`, `ab_glyph_rasterizer`)
 - `src/core/geometry.rs`: VAO/VBO management and instancing setup
 - `src/graphics2d/shapes/shaperenderable.rs`: Main shape rendering implementation
 - `src/graphics2d/shapes/mod.rs`: Shape data types (geometry only, no GPU)
-- `wilhelm_renderer_sys/src/lib.rs`: Raw FFI bindings root (`opengl`, `glfw`, `freetype` modules)
+- `wilhelm_renderer_sys/src/lib.rs`: Raw FFI bindings root (`opengl`, `glfw` modules)
 - `wilhelm_renderer_sys/cpp/glrenderer.cpp`: C++ wrapper functions called via FFI
 - `wilhelm_renderer_sys/build.rs`: CMake integration and platform-specific linking
 

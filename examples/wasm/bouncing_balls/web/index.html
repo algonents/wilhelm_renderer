@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>wilhelm_renderer — bouncing balls (WebAssembly)</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="wilhelm-canvas"></canvas>
+  <!-- Serve the REPO ROOT (python3 -m http.server 8000) and open
+       /examples/wasm/bouncing_balls/web/ — the module loads straight from
+       target/, no copy step. -->
+  <script>
+    window.WILHELM_WASM =
+      "../../../../target/wasm32-unknown-unknown/release/bouncing_balls_wasm.wasm";
+  </script>
+  <script src="../../../../wilhelm_renderer_sys/js/webglrenderer.js"></script>
+</body>
+</html>

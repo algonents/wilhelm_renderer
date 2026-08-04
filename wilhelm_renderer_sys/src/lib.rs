@@ -5,6 +5,8 @@
 //! GLFW 3.4 and FreeType 2.13.2 sources. It exposes no safe Rust API —
 //! safe wrappers live in the upper `wilhelm_renderer` crate.
 
-pub mod freetype;
 pub mod glfw;
 pub mod opengl;
+
+#[cfg(target_arch = "wasm32")]
+mod web;

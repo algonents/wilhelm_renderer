@@ -9,6 +9,11 @@ fn main() {
         // don't build the native dependencies for doc generation
         return;
     }
+    if env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("wasm32") {
+        // Browser backend: pure Rust + JS glue, no C is built or linked
+        // (see docs/DESIGN_WASM.md). Skip CMake entirely.
+        return;
+    }
     println!("cargo:rerun-if-changed=cpp/CMakeLists.txt");
     println!("cargo:rerun-if-changed=cpp/glrenderer.cpp");
     println!("cargo:rerun-if-changed=cpp/glrenderer.h");
@@ -55,12 +60,6 @@ fn main() {
         );
         println!("cargo:rustc-link-lib=static=glrenderer");
         println!("cargo:rustc-link-lib=static=glfw3");
-        // FreeType uses 'd' suffix for debug builds
-        if profile == "debug" {
-            println!("cargo:rustc-link-lib=static=freetyped");
-        } else {
-            println!("cargo:rustc-link-lib=static=freetype");
-        }
 
         if link_gl {
             println!("cargo:rustc-link-lib=dylib=GL");
@@ -73,12 +72,6 @@ fn main() {
         );
         println!("cargo:rustc-link-lib=static=glrenderer");
         println!("cargo:rustc-link-lib=static=glfw3");
-        // FreeType uses 'd' suffix for debug builds
-        if profile == "debug" {
-            println!("cargo:rustc-link-lib=static=freetyped");
-        } else {
-            println!("cargo:rustc-link-lib=static=freetype");
-        }
 
         println!("cargo:rustc-link-lib=framework=CoreFoundation");
         println!("cargo:rustc-link-lib=framework=IOKit");
@@ -96,12 +89,6 @@ fn main() {
         println!("cargo:rustc-link-search=native={}", build_dir.display());
         println!("cargo:rustc-link-lib=static=glrenderer");
         println!("cargo:rustc-link-lib=static=glfw3");
-        // FreeType uses 'd' suffix for debug builds
-        if profile == "debug" {
-            println!("cargo:rustc-link-lib=static=freetyped");
-        } else {
-            println!("cargo:rustc-link-lib=static=freetype");
-        }
 
         // Link Windows system libraries
         println!("cargo:rustc-link-lib=dylib=opengl32");

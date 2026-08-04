@@ -23,15 +23,15 @@ Its goal is to provide a robust foundation for rendering 2D shapes and visualizi
 
 **Markers:** Geometric point symbols (Circle, Cross, Diamond, Square, Star, Triangle, Wye) via `MarkerType`
 
-**Text:** FreeType-based rendering with font atlas caching and on-demand glyph loading
+**Text:** Pure-Rust glyph rasterization (`ttf-parser` + `ab_glyph_rasterizer`) with font atlas caching and on-demand glyph loading
 
 **Projection:** Camera2D with world/screen coordinate conversion, pan, zoom, and WGS84/Mercator support
 
-**Bundled dependencies:** GLFW 3.4 and FreeType 2.13.2 are included — no external setup required
+**Bundled dependencies:** GLFW 3.4 is included — no external setup required
 
 ## Crate structure
 
-This crate provides the safe Rust API — shapes, camera, text, and the rendering loop. The companion [`wilhelm_renderer_sys`](https://crates.io/crates/wilhelm_renderer_sys) crate contains the raw `extern "C"` bindings and the bundled GLFW 3.4 / FreeType 2.13.2 sources; Cargo pulls it in automatically as a transitive dependency.
+This crate provides the safe Rust API — shapes, camera, text, and the rendering loop. The companion [`wilhelm_renderer_sys`](https://crates.io/crates/wilhelm_renderer_sys) crate contains the raw `extern "C"` bindings and the bundled GLFW 3.4 sources; Cargo pulls it in automatically as a transitive dependency.
 
 ## Quick Start
 
@@ -123,7 +123,7 @@ cargo build --workspace
 | <a href="examples/triangle"><img width="120" alt="triangle" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/triangle.png"></a> | triangle | Low-level: custom shaders and geometry |
 | <a href="examples/transforms"><img width="120" alt="transforms" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/transforms.png"></a> | transforms | Low-level: matrix transforms and animation |
 | <a href="examples/shapes"><img width="120" alt="shapes" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes | All supported shape types |
-| <a href="examples/text"><img width="120" alt="text" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a> | text | Text rendering with FreeType |
+| <a href="examples/text"><img width="120" alt="text" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/text.png"></a> | text | Text rendering |
 | <a href="examples/rotations"><img width="120" alt="rotations" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/rotations.png"></a> | rotations | Per-shape rotation and animation |
 | <a href="examples/shapes_scaled"><img width="120" alt="shapes_scaled" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/shapes.png"></a> | shapes_scaled | Shapes with scroll-to-zoom scaling |
 | <a href="examples/bouncing_balls"><img width="120" alt="bouncing_balls" src="https://raw.githubusercontent.com/algonents/wilhelm_renderer/master/images/bouncing_balls.png"></a> | bouncing_balls | 200 animated balls with per-shape rendering |

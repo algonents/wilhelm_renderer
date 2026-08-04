@@ -1,4 +1,5 @@
-#version 330 core
+#version 300 es
+precision highp float;
 uniform vec4 geometryColor;
 uniform float u_dash_length;
 uniform float u_gap_length;

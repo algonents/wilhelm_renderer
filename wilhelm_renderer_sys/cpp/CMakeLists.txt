@@ -27,27 +27,15 @@ set(GLFW_BUILD_X11 ${GLRENDERER_BUILD_X11} CACHE BOOL "" FORCE)
 
 add_subdirectory(glfw-3.4)
 
-# === FreeType Setup (bundled) ===
-set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
-set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
-
-add_subdirectory(freetype-2.13.2)
-
 include_directories(glad/include)
 include_directories(glfw-3.4/include)
-include_directories(freetype-2.13.2/include)
 
 add_library(glrenderer STATIC glrenderer.cpp glad/src/glad.c)
 
 target_link_libraries(glrenderer glfw)
-target_link_libraries(glrenderer freetype)
 if(GLRENDERER_LINK_GL)
     target_link_libraries(glrenderer OpenGL::GL)
 endif()
 
 # Export static libraries
 set_target_properties(glfw PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-set_target_properties(freetype PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

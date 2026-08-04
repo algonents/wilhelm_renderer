@@ -1,13 +1,14 @@
 use crate::core::engine::opengl::{
-    GL_POINTS, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLES, GLfloat, Vec2,
+    GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP, GL_TRIANGLES, GLfloat, Vec2,
 };
 use crate::core::{
     Attribute, Color, FontAtlas, Geometry, Mesh, Renderable, Renderer, Shader,
-    generate_texture_from_image, load_image,
+    generate_texture_from_image, load_image, try_load_image,
 };
+use crate::core::image::{Image as CoreImage, ImageError, ImageSource};
 use crate::graphics2d::shapes::{
-    Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Polygon, Polyline, Rectangle,
-    RoundedRectangle, ShapeKind, Text, Triangle,
+    Arc as ArcShape, Circle, Ellipse, Image, Line, MultiPoint, Point, Polygon, Polyline,
+    Rectangle, RoundedRectangle, ShapeKind, Text, Triangle,
 };
 use crate::core::math::Mat4;
 use std::cell::{OnceCell, RefCell};
@@ -16,6 +17,10 @@ use std::f32::consts::PI;
 use std::rc::Rc;
 
 const MIN_STROKE_WIDTH: f32 = 1.0;
+
+/// Segments per circle-backed dot (Point/MultiPoint). Dots are small;
+/// 24 segments is visually indistinguishable from the 100 used by Circle.
+const DOT_SEGMENTS: usize = 24;
 
 /// Anchor point used for positioning, rotation, and scaling.
 ///
@@ -205,23 +210,6 @@ fn dashed_shader() -> Rc<Shader> {
 }
 
 thread_local! {
-    static POINT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
-}
-
-fn point_shader() -> Rc<Shader> {
-    POINT_SHADER.with(|cell| {
-        cell.get_or_init(|| {
-            let vert_src = include_str!("../shaders/shape.vert");
-            let frag_src = include_str!("../shaders/point.frag");
-            Rc::new(
-                Shader::compile(vert_src, frag_src, None).expect("Failed to compile point shader"),
-            )
-        })
-        .clone()
-    })
-}
-
-thread_local! {
     static IMAGE_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
 }
 fn image_shader() -> Rc<Shader> {
@@ -239,6 +227,7 @@ fn image_shader() -> Rc<Shader> {
 
 thread_local! {
     static TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
+    static SDF_TEXT_SHADER: OnceCell<Rc<Shader>> = OnceCell::new();
 }
 fn text_shader() -> Rc<Shader> {
     TEXT_SHADER.with(|cell| {
@@ -252,29 +241,72 @@ fn text_shader() -> Rc<Shader> {
         .clone()
     })
 }
+fn sdf_text_shader() -> Rc<Shader> {
+    SDF_TEXT_SHADER.with(|cell| {
+        cell.get_or_init(|| {
+            // Same vertex shader as bitmap text; only the fragment stage
+            // interprets the atlas texel as a distance instead of coverage.
+            let vert_src = include_str!("../shaders/text.vert");
+            let frag_src = include_str!("../shaders/text_sdf.frag");
+            Rc::new(
+                Shader::compile(vert_src, frag_src, None)
+                    .expect("Failed to compile SDF text shader"),
+            )
+        })
+        .clone()
+    })
+}
 
-/// Font cache key: (font_path, font_size)
-type FontCacheKey = (String, u32);
+/// Font cache key: (font_path, font_size, is_sdf)
+type FontCacheKey = (String, u32, bool);
 
 thread_local! {
     /// Global font cache - shares FontAtlas instances across text renderables.
     /// Properly dropped when thread exits, no memory leaks.
     static FONT_CACHE: RefCell<HashMap<FontCacheKey, Rc<RefCell<FontAtlas>>>> = RefCell::new(HashMap::new());
+
+    /// Fonts registered by name (register_font). Checked before the
+    /// filesystem, so `Text::font_path` can name a registered font — the
+    /// only way to load fonts on backends without a filesystem (wasm).
+    static FONT_REGISTRY: RefCell<HashMap<String, Rc<Vec<u8>>>> = RefCell::new(HashMap::new());
 }
 
-/// Get or create a FontAtlas from the cache
-fn get_or_create_font_atlas(font_path: &str, font_size: u32) -> Rc<RefCell<FontAtlas>> {
+/// Register font bytes under a name (the browser analogue of CSS
+/// `@font-face`). Any `Text` whose `font_path` equals `name` uses these
+/// bytes instead of reading the filesystem. Registering fetched or embedded
+/// bytes is the only way to load fonts on wasm; on native it simply takes
+/// precedence over a same-named path.
+pub fn register_font(name: &str, bytes: Vec<u8>) {
+    FONT_REGISTRY.with(|fonts| {
+        fonts.borrow_mut().insert(name.to_string(), Rc::new(bytes));
+    });
+}
+
+/// Get or create a FontAtlas from the cache. SDF glyphs carry spread
+/// padding on every side, so SDF atlases get 1024 (48px ASCII overflows 512).
+fn get_or_create_font_atlas(font_path: &str, font_size: u32, sdf: bool) -> Rc<RefCell<FontAtlas>> {
     FONT_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
-        let key = (font_path.to_string(), font_size);
+        let key = (font_path.to_string(), font_size, sdf);
 
         if let Some(atlas) = cache.get(&key) {
             return atlas.clone();
         }
 
-        // Create new FontAtlas and cache it
-        let atlas = FontAtlas::new(font_path, font_size, 512)
-            .expect("Failed to create font atlas");
+        let atlas_size = if sdf { 1024 } else { 512 };
+
+        // Registered name first, filesystem path second.
+        let registered = FONT_REGISTRY.with(|fonts| fonts.borrow().get(font_path).cloned());
+        let atlas = match (registered, sdf) {
+            (Some(bytes), false) => FontAtlas::from_source(bytes.as_slice(), font_size, atlas_size),
+            (Some(bytes), true) => {
+                FontAtlas::from_source_sdf(bytes.as_slice(), font_size, atlas_size)
+            }
+            (None, false) => FontAtlas::new(font_path, font_size, atlas_size),
+            (None, true) => FontAtlas::new_sdf(font_path, font_size, atlas_size),
+        }
+        .expect("Failed to create font atlas");
+
         let atlas_rc = Rc::new(RefCell::new(atlas));
         cache.insert(key, atlas_rc.clone());
         atlas_rc
@@ -428,8 +460,8 @@ impl ShapeRenderable {
 
     fn from_shape_with_anchor(shape: ShapeKind, style: ShapeStyle, anchor: Anchor) -> Self {
         match shape {
-            ShapeKind::Point => {
-                ShapeRenderable::point(style.fill.unwrap_or(Color::white()), anchor)
+            ShapeKind::Point(point) => {
+                ShapeRenderable::point(point, style.fill.unwrap_or(Color::white()), anchor)
             }
             ShapeKind::MultiPoint(mp) => {
                 ShapeRenderable::multi_points(mp, style.fill.unwrap_or(Color::white()), anchor)
@@ -577,12 +609,17 @@ impl ShapeRenderable {
         }
     }
 
-    fn point(color: Color, _anchor: Anchor) -> Self {
-        // Point has only one vertex at (0, 0); anchor is trivially that point
-        // for every variant (bbox is degenerate). Ignore the anchor.
-        let geometry = ShapeRenderable::point_geometry();
-        let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
-        ShapeRenderable::new(mesh, ShapeKind::Point)
+    fn point(point: Point, color: Color, anchor: Anchor) -> Self {
+        // Circle-backed dot (GL_POINTS is retired — see shapes::Point).
+        let r = point.radius;
+        let (ax, ay) = resolve_anchor(anchor, (-r, -r), (r, r), (0.0, 0.0));
+        let geometry = ShapeRenderable::circle_geometry(r, DOT_SEGMENTS, ax, ay);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
+
+        let mut s = ShapeRenderable::new(mesh, ShapeKind::Point(point));
+        s.x = ax;
+        s.y = ay;
+        s
     }
 
     fn multi_points(multi_point: MultiPoint, color: Color, anchor: Anchor) -> Self {
@@ -598,8 +635,11 @@ impl ShapeRenderable {
             .map(|(px, py)| (px - ax, py - ay))
             .collect();
 
-        let geometry = ShapeRenderable::point_list_geometry(&rel_points);
-        let mesh = Mesh::with_color(point_shader(), geometry, Some(color));
+        // All dots batched into one triangle-list geometry: a single draw
+        // call, and u_offset positioning keeps working (unlike the
+        // instancing path, which zeroes it by contract).
+        let geometry = ShapeRenderable::dot_list_geometry(&rel_points, multi_point.radius);
+        let mesh = Mesh::with_color(default_shader(), geometry, Some(color));
 
         let mut s = ShapeRenderable::new(mesh, ShapeKind::MultiPoint(multi_point));
         s.x = ax;
@@ -1067,8 +1107,33 @@ impl ShapeRenderable {
     }
 
     fn text(text: Text, color: Color, anchor: Anchor) -> Self {
-        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size);
+        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size, false);
+        Self::text_with_atlas(text, color, anchor, font_atlas, text_shader())
+    }
 
+    /// Scale-independent text rendered from a signed-distance-field atlas:
+    /// stays sharp under any `set_scale` / zoom, where bitmap text blurs.
+    /// `font_path` may be a filesystem path or a name registered via
+    /// [`register_font`]. Only reachable through this constructor —
+    /// `from_shape(ShapeKind::Text)` keeps the bitmap path.
+    pub fn text_sdf(
+        content: impl Into<String>,
+        font_path: impl Into<String>,
+        font_size: u32,
+        color: Color,
+    ) -> Self {
+        let text = Text::new(content, font_path, font_size);
+        let font_atlas = get_or_create_font_atlas(&text.font_path, text.font_size, true);
+        Self::text_with_atlas(text, color, Anchor::Default, font_atlas, sdf_text_shader())
+    }
+
+    fn text_with_atlas(
+        text: Text,
+        color: Color,
+        anchor: Anchor,
+        font_atlas: Rc<RefCell<FontAtlas>>,
+        shader: Rc<Shader>,
+    ) -> Self {
         // Generate raw glyph vertices and compute the bbox in one pass.
         let (mut vertices, bbox_min, bbox_max, texture_id) = {
             let mut atlas = font_atlas.borrow_mut();
@@ -1096,7 +1161,6 @@ impl ShapeRenderable {
         geometry.add_vertex_attribute(Attribute::new(0, 2, 4, 0));
         geometry.add_vertex_attribute(Attribute::new(1, 2, 4, 2));
 
-        let shader = text_shader();
         let mut mesh = Mesh::with_texture(shader, geometry, Some(texture_id));
         mesh.color = Some(color);
 
@@ -1106,18 +1170,38 @@ impl ShapeRenderable {
         s
     }
 
-    pub fn image_with_size(path: &str, width: f32, height: f32) -> ShapeRenderable {
-        Self::image_with_size_and_anchor(path, width, height, Anchor::Default)
+    pub fn image_with_size<'a>(
+        source: impl Into<ImageSource<'a>>,
+        width: f32,
+        height: f32,
+    ) -> ShapeRenderable {
+        Self::image_with_size_and_anchor(&load_image(source), width, height, Anchor::Default)
+    }
+
+    /// Non-panicking twin of [`Self::image_with_size`]. On wasm a panic
+    /// aborts the whole module, so callers feeding fetched bytes should
+    /// prefer this.
+    pub fn try_image_with_size<'a>(
+        source: impl Into<ImageSource<'a>>,
+        width: f32,
+        height: f32,
+    ) -> Result<ShapeRenderable, ImageError> {
+        let image = try_load_image(source)?;
+        Ok(Self::image_with_size_and_anchor(
+            &image,
+            width,
+            height,
+            Anchor::Default,
+        ))
     }
 
     fn image_with_size_and_anchor(
-        path: &str,
+        image: &CoreImage,
         width: f32,
         height: f32,
         anchor: Anchor,
     ) -> ShapeRenderable {
-        let image = load_image(path);
-        let texture_id = generate_texture_from_image(&image);
+        let texture_id = generate_texture_from_image(image);
 
         // Image geometry is built centered on origin, so bbox = (-w/2..w/2, -h/2..h/2)
         let hw = width * 0.5;
@@ -1135,41 +1219,47 @@ impl ShapeRenderable {
         s
     }
 
-    pub fn image(path: &str) -> Self {
-        let image = load_image(path);
-        Self::image_with_size(path, image.width as f32, image.height as f32)
+    pub fn image<'a>(source: impl Into<ImageSource<'a>>) -> Self {
+        let image = load_image(source);
+        let (width, height) = (image.width as f32, image.height as f32);
+        Self::image_with_size_and_anchor(&image, width, height, Anchor::Default)
     }
 
-    fn point_geometry() -> Geometry {
-        let vertex = vec![0.0, 0.0];
-        let mut geometry = Geometry::new(GL_POINTS);
-        geometry.add_buffer(&vertex, 2);
-
-        geometry.add_vertex_attribute(Attribute::new(0, 2, 2, 0));
-
-        geometry
+    /// Non-panicking twin of [`Self::image`]; see [`Self::try_image_with_size`].
+    pub fn try_image<'a>(source: impl Into<ImageSource<'a>>) -> Result<Self, ImageError> {
+        let image = try_load_image(source)?;
+        let (width, height) = (image.width as f32, image.height as f32);
+        Ok(Self::image_with_size_and_anchor(
+            &image,
+            width,
+            height,
+            Anchor::Default,
+        ))
     }
 
-    fn point_list_geometry(points: &[(GLfloat, GLfloat)]) -> Geometry {
-        let mut vertices = Vec::with_capacity(points.len() * 2);
+    /// One triangle-list geometry containing a disc per point — the whole
+    /// dot cloud renders in a single draw call.
+    fn dot_list_geometry(points: &[(GLfloat, GLfloat)], radius: f32) -> Geometry {
+        let mut vertices: Vec<GLfloat> = Vec::with_capacity(points.len() * DOT_SEGMENTS * 6);
 
-        for &(x, y) in points {
-            vertices.push(x);
-            vertices.push(y);
+        for &(cx, cy) in points {
+            for i in 0..DOT_SEGMENTS {
+                let t0 = (i as f32 / DOT_SEGMENTS as f32) * std::f32::consts::TAU;
+                let t1 = ((i + 1) as f32 / DOT_SEGMENTS as f32) * std::f32::consts::TAU;
+                vertices.extend_from_slice(&[
+                    cx,
+                    cy,
+                    cx + radius * t0.cos(),
+                    cy + radius * t0.sin(),
+                    cx + radius * t1.cos(),
+                    cy + radius * t1.sin(),
+                ]);
+            }
         }
 
-        let values_per_vertex = 2;
-
-        let mut geometry = Geometry::new(GL_POINTS);
-        geometry.add_buffer(&vertices, values_per_vertex);
-
-        geometry.add_vertex_attribute(Attribute::new(
-            0, // position
-            values_per_vertex,
-            values_per_vertex as usize,
-            0,
-        ));
-
+        let mut geometry = Geometry::new(GL_TRIANGLES);
+        geometry.add_buffer(&vertices, 2);
+        geometry.add_vertex_attribute(Attribute::new(0, 2, 2, 0));
         geometry
     }
 

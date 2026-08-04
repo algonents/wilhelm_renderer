@@ -1,0 +1,13 @@
+[package]
+name = "text_sdf_wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# cdylib: the browser loads this as a .wasm module. The crate also builds
+# natively as part of `cargo build --workspace` (API-breakage canary).
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wilhelm_renderer = { path = "../../.." }

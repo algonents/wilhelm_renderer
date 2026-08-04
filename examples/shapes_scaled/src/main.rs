@@ -2,7 +2,7 @@ extern crate wilhelm_renderer;
 
 use wilhelm_renderer::core::{App, Color, Window};
 use wilhelm_renderer::graphics2d::shapes::{
-    Anchor, Circle, Ellipse, Line, MultiPoint, Polygon, Polyline, Rectangle, RoundedRectangle,
+    Anchor, Circle, Ellipse, Line, MultiPoint, Point, Polygon, Polyline, Rectangle, RoundedRectangle,
     ShapeKind, ShapeRenderable, ShapeStyle,
 };
 
@@ -47,7 +47,6 @@ fn main() {
     });
 
     let mut app = App::new(window);
-    app.renderer().set_point_size(6.0);
 
     // Polyline points (relative to first point)
     let polyline_points = vec![
@@ -128,12 +127,12 @@ fn main() {
         ),
         // Point at (600, 300)
         shape((600.0, 300.0),
-            ShapeKind::Point,
+            ShapeKind::Point(Point::new(3.0)),
             fill_style(Color::from_rgb(1.0, 0.0, 0.0)),
         ),
         // MultiPoint at (600, 100)
         shape((600.0, 100.0),
-            ShapeKind::MultiPoint(MultiPoint::new(multipoint_points)),
+            ShapeKind::MultiPoint(MultiPoint::new(multipoint_points, 3.0)),
             fill_style(Color::from_rgb(0.0, 0.0, 1.0)),
         ),
         // Ellipse at (600, 200) — already centers by default

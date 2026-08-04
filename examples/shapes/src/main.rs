@@ -1,7 +1,7 @@
 extern crate wilhelm_renderer;
 
 use wilhelm_renderer::core::{App, Color, Window};
-use wilhelm_renderer::graphics2d::shapes::{Arc, Circle, Ellipse, Line, MultiPoint, Polygon, Polyline, Rectangle, RoundedRectangle, ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
+use wilhelm_renderer::graphics2d::shapes::{Arc, Circle, Point, Ellipse, Line, MultiPoint, Polygon, Polyline, Rectangle, RoundedRectangle, ShapeKind, ShapeRenderable, ShapeStyle, Text, Triangle};
 
 fn create_equilateral_triangle() -> [(f32, f32); 3] {
     let side = 20.0;
@@ -37,7 +37,6 @@ fn generate_sine_wave_local(
 fn main() {
     let window = Window::new("Shapes", 800, 800, Color::from_rgb(0.07, 0.13, 0.17));
     let mut app = App::new(window);
-    app.renderer().set_point_size(6.0);
 
     // Convert polyline points to relative coordinates (relative to first point)
     let polyline_points = vec![(0.0, 0.0), (50.0, 130.0), (100.0, 110.0), (100.0, 200.0)];
@@ -118,12 +117,12 @@ fn main() {
         ),
         // Point at (650, 260)
         shape((650.0, 260.0),
-            ShapeKind::Point,
+            ShapeKind::Point(Point::new(3.0)),
             ShapeStyle::fill(Color::from_rgb(1.0, 0.0, 0.0)),
         ),
         // MultiPoint (sine wave)
         shape((500.0, 100.0),
-            ShapeKind::MultiPoint(MultiPoint::new(sine_wave_local)),
+            ShapeKind::MultiPoint(MultiPoint::new(sine_wave_local, 3.0)),
             ShapeStyle::fill(Color::from_rgb(0.0, 0.0, 1.0)),
         ),
         // Ellipse at (600, 200)

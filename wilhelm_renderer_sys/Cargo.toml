@@ -4,9 +4,9 @@ version = "0.11.0"
 edition = "2021"
 authors = ["Anwar Ludin <anwar.ludin@algonents.com>"]
 license = "MIT"
-description = "Native bindings and bundled GLFW/FreeType C/C++ code for wilhelm_renderer"
+description = "Native bindings and bundled GLFW C/C++ code for wilhelm_renderer"
 repository = "https://github.com/algonents/wilhelm_renderer"
-keywords = ["opengl", "ffi", "glfw", "freetype"]
+keywords = ["opengl", "ffi", "glfw"]
 categories = ["external-ffi-bindings", "rendering::graphics-api"]
 links = "wilhelm_renderer"
 

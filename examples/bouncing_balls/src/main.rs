@@ -21,7 +21,6 @@ fn main() {
 
     let window = Window::new("Bouncing Balls", 800, 600, Color::from_rgb(0.07, 0.13, 0.17));
     let mut app = App::new(window);
-    app.renderer().set_point_size(6.0);
 
     let mut rng = rand::rng();
     app.add_shapes(

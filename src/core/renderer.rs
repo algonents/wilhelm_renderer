@@ -3,8 +3,7 @@ use crate::core::engine::opengl::{gl_active_texture, gl_bind_texture, gl_blend_f
 use crate::core::mesh::Mesh;
 use std::ffi::c_void;
 use crate::core::engine::opengl::{
-    gl_draw_arrays, gl_get_uniform_location, gl_point_size, gl_uniform_matrix_4fv, GLboolean,
-    GLfloat,
+    gl_draw_arrays, gl_get_uniform_location, gl_uniform_matrix_4fv, GLboolean,
 };
 use crate::core::window::WindowHandle;
 
@@ -19,10 +18,6 @@ pub trait Renderable {
 impl Renderer {
     pub fn new(window_handle: WindowHandle) -> Self {
         Renderer { window_handle }
-    }
-
-    pub fn set_point_size(&self, point_size: GLfloat) {
-        gl_point_size(point_size);
     }
 
     pub fn viewport_size(&self) -> (i32, i32) {

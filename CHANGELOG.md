@@ -1,5 +1,62 @@
 # Changelog
 
+## [Unreleased] — feat/wasm_backend
+
+### Changed
+
+- **GL_POINTS retired; `Point`/`MultiPoint` are circle-backed with a
+  per-shape radius.** `Point::new(radius)` and
+  `MultiPoint::new(points, radius)` replace the global
+  `Renderer::set_point_size` (removed — it was hidden global draw state,
+  and ES 3.0/WebGL2 only guarantee 1px point sprites, which also clip by
+  center and pop out at viewport edges). `ShapeKind::Point` now carries
+  the `Point`. `MultiPoint` renders all dots in one batched draw call.
+  The `_glPointSize` contract symbol and `point.frag` are deleted.
+- **All shaders are authored in GLSL ES 3.00** (`#version 300 es` +
+  fragment `precision highp float;`); the native backend rewrites the
+  version header to `330 core` in `_glShaderSource`. `Shader::compile`
+  now checks per-stage compile status and returns `Err` on failure.
+- **FreeType removed; text rendering is now pure Rust.** Glyphs are parsed
+  and rasterized by `ttf-parser` + `ab_glyph_rasterizer` (both
+  zero-dependency crates) in `src/core/font.rs`. The bundled FreeType
+  2.13.2 C sources, the `_ft_*` FFI symbols, and the FreeType build/link
+  steps are gone — the sys contract shrinks from ~87 to ~78 symbols, and
+  the same text stack runs on every backend (including wasm). Glyphs are
+  rendered unhinted; spacing now uses fractional advances (FreeType
+  truncated to whole pixels).
+- **Font atlas texture uses sized `GL_R8`** instead of unsized `GL_RED`
+  as internalformat (required by WebGL2, valid on GL 3.3).
+- `FontAtlas::new` now returns `Result<_, FontError>` (was `Result<_, String>`).
+
+### Added
+
+- **SDF (vector-quality) text rendering** — `ShapeRenderable::text_sdf(content,
+  font_path, size, color)` renders from a signed-distance-field atlas: one
+  48px atlas stays sharp at any `set_scale`/zoom, where bitmap text blurs.
+  Pure-Rust SDF generation (outline-derived distances + scanline-winding
+  sign) in `src/core/font.rs` (`AtlasMode`, `FontAtlas::new_sdf` /
+  `from_source_sdf`); new `text_sdf.frag` fwidth/smoothstep shader; works
+  on wasm (see `examples/wasm/text_sdf`, live zoom demo). Ported from the
+  `feat/vector-fonts` prototype, whose FreeType-based generator did not
+  survive the FreeType removal. See `docs/SDF_FONTS.md`.
+- **`Shader::compile` now verifies compile status** per stage
+  (vertex/fragment/geometry) and returns `Err` naming the failed stage
+  instead of silently linking a broken program (salvaged from
+  `feat/vector-fonts`).
+- **Byte-based asset loading** (works on wasm, where there is no
+  filesystem):
+  - `ImageSource{Path,Bytes}` / `FontSource{Path,Bytes}` — every loader
+    converges on bytes; `From` impls keep existing `&str` path callers
+    source-compatible and make `include_bytes!` arrays work directly.
+  - `try_load_image`, `ShapeRenderable::try_image`,
+    `ShapeRenderable::try_image_with_size` — non-panicking loaders for
+    network-fetched bytes (a panic aborts the module on wasm).
+  - `FontAtlas::from_source` for path- or byte-backed atlases.
+  - `register_font(name, bytes)` — registers font bytes under a name;
+    `Text::font_path` matching a registered name uses those bytes instead
+    of the filesystem (the wasm path; native analogue of CSS
+    `@font-face`).
+
 ## [0.12.0] - 2026-04-18
 
 ### Added

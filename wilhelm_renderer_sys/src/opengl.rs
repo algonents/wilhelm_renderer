@@ -65,6 +65,8 @@ pub const GL_TRIANGLE_STRIP: u32 = 0x0005;
 pub const GL_VIEWPORT: u32 = 0x0BA2;
 pub const GL_TEXTURE_2D: u32 = 0x0DE1;
 pub const GL_RED: u32 = 0x1903;
+/// Sized single-channel internalformat — required by WebGL2, valid on GL 3.3.
+pub const GL_R8: u32 = 0x8229;
 pub const GL_CULL_FACE: u32 = 0x0B44;
 pub const GL_BLEND: u32 = 0x0BE2;
 pub const GL_SRC_ALPHA: u32 = 0x0302;
@@ -85,6 +87,10 @@ pub const GL_MULTISAMPLE: GLuint = 0x809D;
 pub const GL_SAMPLES: GLuint = 0x80A9;
 pub const GL_UNPACK_ALIGNMENT: GLenum = 0x0CF5;
 
+#[cfg(target_arch = "wasm32")]
+pub use crate::web::opengl::*;
+
+#[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
     pub fn _glClearColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat);
     pub fn _glViewPort(x: GLint, y: GLint, width: GLsizei, height: GLsizei);
@@ -173,7 +179,6 @@ unsafe extern "C" {
         transpose: GLboolean,
         value: *const GLfloat,
     );
-    pub fn _glPointSize(size: GLfloat);
     pub fn _glEnable(cap: GLenum);
     pub fn _glBlendFunc(sfactor: GLenum, dfactor: GLenum);
 }
